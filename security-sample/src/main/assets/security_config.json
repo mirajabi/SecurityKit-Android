@@ -1,0 +1,31 @@
+{
+  "features": {
+    "rootDetection": true,
+    "emulatorDetection": true,
+    "debuggerDetection": true,
+    "usbDebugDetection": true,
+    "vpnDetection": true,
+    "mitmDetection": true,
+    "screenCaptureProtection": true,
+    "appSignatureVerification": false,
+    "repackagingDetection": false
+  },
+  "thresholds": {
+    "emulatorSignalsToBlock": 2,
+    "rootSignalsToBlock": 2
+  },
+  "policy": {
+    "onRoot": "BLOCK",
+    "onEmulator": "BLOCK",
+    "onDebugger": "WARN",
+    "onUsbDebug": "WARN",
+    "onVpn": "WARN",
+    "onMitm": "BLOCK"
+  },
+  "appIntegrity": {
+    "expectedPackageName": "com.miaadrajabi.securitysample",
+    "expectedSignatureSha256": []
+  }
+}
+
+

@@ -1,0 +1,6 @@
+<resources>
+    <string name="security_blocked_title">Access blocked</string>
+    <string name="security_blocked_message">Access blocked due to security policy.</string>
+</resources>
+
+
