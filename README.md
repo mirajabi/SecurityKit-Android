@@ -2,6 +2,33 @@
 
 Production-grade Android security toolkit for banking/fintech/POS apps.
 
+## JitPack (online implementation)
+
+Add JitPack repository and dependency:
+
+settings.gradle:
+```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+app/build.gradle:
+```gradle
+dependencies {
+    implementation 'com.github.mirajabi:SecurityKit-Android:1.0.0'
+}
+```
+
+---
+
+Production-grade Android security toolkit for banking/fintech/POS apps.
+
 ## Features
 
 ### 🛡️ Device Integrity
