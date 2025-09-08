@@ -23,7 +23,10 @@ data class SecurityConfig(
         val screenCaptureProtection: Boolean = true,
         val appSignatureVerification: Boolean = false,
         val repackagingDetection: Boolean = true
-    )
+    ) {
+        @JvmName("isScreenCaptureProtection")
+        fun isScreenCaptureProtection(): Boolean = screenCaptureProtection
+    }
 
     @Serializable
     data class Thresholds(
