@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
+    id 'maven-publish'
 }
 
 android {
@@ -49,6 +50,19 @@ dependencies {
     testImplementation libs.mockk
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId = 'com.github.mirajabi'
+                artifactId = 'securitymodule'
+                version = project.version.toString()
+                from components.release
+            }
+        }
+    }
 }
 
 

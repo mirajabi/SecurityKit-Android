@@ -1,72 +1,64 @@
-# SecurityModule - کتابخانه امنیت Android
+# SecurityModule - Android Security Library
 
-کتابخانه‌ای حرفه‌ای برای محافظت از اپلیکیشن‌های بانکی، فین‌تک و POS در برابر تهدیدات امنیتی.
+Production-grade Android security toolkit for banking/fintech/POS apps.
 
-## ویژگی‌ها
+## Features
 
-### 🛡️ تشخیص دستگاه
-- **Root Detection**: تشخیص حرفه‌ای روت با چندین روش
-- **Emulator Detection**: شناسایی امولاتورها (Android Studio، Genymotion، BlueStacks)
-- **Debugger Detection**: تشخیص دیباگر متصل
-- **USB Debug**: بررسی فعال بودن USB Debugging
-- **VPN Detection**: تشخیص اتصال VPN
-- **Developer Options**: بررسی فعال بودن گزینه‌های توسعه‌دهنده
+### 🛡️ Device Integrity
+- Root detection (multi-signal)
+- Emulator detection (Android Studio, Genymotion, BlueStacks)
+- Debugger detection
+- USB debug detection
+- VPN detection
+- Developer options
 
-### 🔐 یکپارچگی اپلیکیشن
-- **Signature Verification**: بررسی امضای دیجیتال اپلیکیشن
-- **Repackaging Detection**: تشخیص بسته‌بندی مجدد اپ
-- **File Integrity**: بررسی یکپارچگی فایل‌های حیاتی
+### 🔐 App Integrity
+- Signature verification
+- Repackaging detection
+- File integrity (pluggable)
 
-### 🚫 ضد دستکاری
-- **Anti-Hooking**: تشخیص ابزارهای hooking (Frida, Xposed)
-- **Anti-Debugging**: محافظت در برابر تحلیل‌گرهای پویا
-- **Screen Capture Protection**: جلوگیری از اسکرین‌شات و ضبط صفحه
+### 🚫 Anti-Tamper
+- Anti-hooking (Frida, Xposed)
+- Anti-debugging
+- Screen capture protection (FLAG_SECURE + active monitoring + white overlay)
 
-### 🔒 رمزنگاری
-- **Hashing**: SHA-256/384/512، مقایسه constant-time
-- **Symmetric Encryption**: AES-GCM، AES-CBC
-- **Asymmetric Encryption**: RSA-OAEP
-- **Android Keystore**: یکپارچگی با Keystore سیستم
-- **Certificate Pinning**: پینینگ گواهی برای HTTPS
+### 🔒 Cryptography
+- Hashing: SHA-256/384/512, constant-time compare
+- Symmetric: AES-GCM, AES-CBC
+- Asymmetric: RSA-OAEP
+- Android Keystore helpers
+- Certificate pinning (OkHttp)
 
-### ⚙️ سیستم پیکربندی
-- **JSON Configuration**: تنظیمات قابل تغییر در runtime
-- **Policy Engine**: تعریف واکنش‌ها (Allow/Warn/Block/Terminate)
-- **Model Overrides**: مدیریت استثناها برای مدل‌های خاص
-- **Telemetry**: گزارش‌دهی رویدادها بدون افشای اطلاعات شخصی
+### ⚙️ Configuration
+- JSON configuration (runtime)
+- Policy engine (Allow/Warn/Block/Terminate)
+- Model/brand overrides
+- Telemetry hooks (no PII)
 
-## نصب و راه‌اندازی
+## Setup
 
-### 1. افزودن وابستگی
-
+### 1) Add dependency (module include)
 ```gradle
 dependencies {
     implementation project(':securitymodule')
 }
 ```
 
-### 2. تنظیمات Proguard/R8
-
-قوانین consumer به صورت خودکار اعمال می‌شوند. برای تنظیمات اضافی:
-
+### 2) Proguard/R8
+Consumer rules are shipped. For additional keep rules:
 ```proguard
 -keep class com.miaadrajabi.securitymodule.** { *; }
 ```
 
-### 3. مجوزهای لازم
-
-مجوزهای زیر به صورت خودکار در Manifest اضافه می‌شوند:
-
+### 3) Permissions
+The library manifest adds:
 ```xml
 <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 ```
 
-## پیکربندی
+## Configuration
 
-### ایجاد فایل کانفیگ
-
-فایل `security_config.json` را در `assets` قرار دهید:
-
+### Create config JSON (assets/security_config.json)
 ```json
 {
   "features": {
@@ -110,34 +102,19 @@ dependencies {
 }
 ```
 
-### تنظیمات Policy
+### Policy
+- Actions: ALLOW / WARN / DEGRADE / BLOCK / TERMINATE
+- Thresholds: `emulatorSignalsToBlock`, `rootSignalsToBlock`
 
-#### اعمال سیاست‌ها:
-- **ALLOW**: اجازه ادامه
-- **WARN**: هشدار (بدون مسدودسازی)
-- **DEGRADE**: محدودسازی ویژگی‌ها
-- **BLOCK**: هدایت به صفحه مسدود
-- **TERMINATE**: خروج از اپلیکیشن
+## Signature Verification
 
-#### آستانه‌ها (Thresholds):
-- `emulatorSignalsToBlock`: تعداد سیگنال‌های امولاتور برای مسدودسازی
-- `rootSignalsToBlock`: تعداد سیگنال‌های روت برای مسدودسازی
-
-## تنظیم امضای دیجیتال (Signature Check)
-
-### 1. استخراج امضای فعلی
-
+### 1) Get current signature(s)
 ```kotlin
 val signatures = SignatureVerifier.currentSigningSha256(context)
-signatures.forEach { signature ->
-    Log.d("Signature", "SHA256: $signature")
-}
+signatures.forEach { Log.d("Signature", "SHA256: $it") }
 ```
 
-### 2. تنظیم در کانفیگ
-
-امضاهای استخراج شده را در `security_config.json` قرار دهید:
-
+### 2) Put into config
 ```json
 {
   "appIntegrity": {
@@ -153,86 +130,53 @@ signatures.forEach { signature ->
 }
 ```
 
-### 3. تولید امضا برای محیط‌های مختلف
-
-#### Debug Keystore:
+### 3) Generate per environment
+Debug keystore:
 ```bash
 keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
-
-#### Release Keystore:
+Release keystore:
 ```bash
 keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
 ```
 
-### 4. بررسی خودکار در کد
-
+### 4) Runtime verification
 ```kotlin
-// بررسی امضا در runtime
-val actualSignatures = SignatureVerifier.currentSigningSha256(context)
-val expectedSignatures = config.appIntegrity.expectedSignatureSha256
-
-val isValid = actualSignatures.any { actual ->
-    expectedSignatures.any { expected ->
-        expected.equals(actual, ignoreCase = true)
-    }
-}
-
+val actual = SignatureVerifier.currentSigningSha256(context)
+val expected = config.appIntegrity.expectedSignatureSha256
+val isValid = actual.any { a -> expected.any { it.equals(a, ignoreCase = true) } }
 if (!isValid) {
-    // اقدام امنیتی
+    // take action (block/terminate)
 }
 ```
 
-## استفاده در کد
+## Usage
 
-### راه‌اندازی پایه
-
+### Basic setup
 ```kotlin
 class MainActivity : Activity() {
     private val telemetry = object : TelemetrySink {
-        override fun onEvent(eventId: String, attributes: Map<String, String>) {
-            // ارسال به سیستم telemetry شما
-            Log.d("Security", "Event: $eventId, Attrs: $attributes")
-        }
+        override fun onEvent(eventId: String, attributes: Map<String, String>) {}
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // بارگذاری کانفیگ
         val config = SecurityConfigLoader.fromAsset(this)
-        
-        // ایجاد ماژول امنیت
         val securityModule = SecurityModule.Builder(applicationContext)
             .setConfig(config)
             .setTelemetry(telemetry)
             .build()
-
-        // اجرای بررسی‌های امنیتی
         val report = securityModule.runAllChecksBlocking()
-        
-        // بررسی نتیجه
         when (report.overallSeverity) {
-            Severity.OK -> {
-                // ادامه عملیات عادی
-                setupNormalUI()
-            }
-            Severity.WARN -> {
-                // نمایش هشدار
-                showWarningBanner(report.findings)
-                setupNormalUI()
-            }
-            Severity.BLOCK -> {
-                // هدایت به صفحه مسدود (خودکار انجام می‌شود)
-                return
-            }
+            Severity.OK -> setupNormalUI()
+            Severity.WARN -> { showWarningBanner(report.findings); setupNormalUI() }
+            Severity.BLOCK -> return
         }
     }
 }
 ```
 
-### بررسی‌های async
-
+### Async checks
 ```kotlin
 lifecycleScope.launch {
     val report = securityModule.runAllChecks()
@@ -240,236 +184,91 @@ lifecycleScope.launch {
 }
 ```
 
-### محافظت از اسکرین‌شات
-
+### Screen capture protection
 ```kotlin
-// فعال‌سازی محافظت از اسکرین‌شات
 if (config.features.screenCaptureProtection) {
     ScreenCaptureProtector.applySecureFlag(this)
-    
-    // مانیتورینگ تلاش‌های اسکرین‌شات
     val monitor = ScreenCaptureMonitor(this)
     monitor.start { type, uri ->
-        // نمایش overlay محافظ
         ScreenCaptureProtector.showWhiteOverlay(this@Activity)
-        
-        // گزارش رویداد
         telemetry.onEvent("screenshot_attempt", mapOf("type" to type.name))
     }
 }
 ```
 
-### استفاده از رمزنگاری
-
+### Crypto utilities
 ```kotlin
-// تولید کلید AES با Keystore
 val key = KeystoreHelper.getOrCreateAesKey("my_secure_key")
-
-// رمزنگاری AES-GCM
-val plaintext = "داده‌های حساس".toByteArray()
+val plaintext = "sensitive data".toByteArray()
 val (iv, ciphertext) = CryptoUtils.encryptAesGcm(key, plaintext)
-
-// رمزگشایی
 val decrypted = CryptoUtils.decryptAesGcm(key, iv, ciphertext)
-
-// هشینگ
 val hash = CryptoUtils.sha256(plaintext)
-
-// مقایسه امن
-val isEqual = CryptoUtils.constantTimeEquals(hash1, hash2)
+val isEqual = CryptoUtils.constantTimeEquals(hash, hash)
 ```
 
-### Certificate Pinning
-
+### Certificate pinning
 ```kotlin
-// ایجاد کلاینت HTTP با پینینگ
 val pinnedClient = SecurityHttp.createPinnedClient(
     hostname = "api.mybank.com",
-    sha256Pins = listOf(
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
-    )
+    sha256Pins = listOf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=")
 )
-
-// استفاده در Retrofit
-val retrofit = Retrofit.Builder()
-    .client(pinnedClient)
-    .baseUrl("https://api.mybank.com/")
-    .build()
+val retrofit = Retrofit.Builder().client(pinnedClient).baseUrl("https://api.mybank.com/").build()
 ```
 
-### ذخیره‌سازی رمزنگاری شده
-
+### Encrypted storage
 ```kotlin
-// ایجاد SharedPreferences رمزنگاری شده
 val securePrefs = EncryptedPreferences.create(context, "secure_data")
-
-// ذخیره داده
 securePrefs.putString("sensitive_token", userToken)
-
-// بازیابی داده
 val token = securePrefs.getString("sensitive_token", null)
 ```
 
-## تشخیص تهدیدات
+## Threat detections
 
-### Root Detection
+### Root detection
+- su/magisk files, test-keys, ro.debuggable/ro.secure, which su, su -c id
+- BusyBox, mount RW, known root packages
 
-کتابخانه از روش‌های زیر برای تشخیص روت استفاده می‌کند:
+### Emulator detection
+- Build props, qemu/vbox files, ro.kernel.qemu, default IP 10.0.2.15
+- Low sensor count, Genymotion/VirtualBox markers
 
-- بررسی فایل‌های `su` در مسیرهای مختلف
-- تشخیص پکیج‌های مدیریت روت (Magisk, SuperSU)
-- بررسی خصوصیات سیستم (`ro.debuggable`, `ro.secure`)
-- اجرای دستورات `su` و `which su`
-- تشخیص BusyBox و فلگ‌های mount
-- بررسی Build.TAGS برای `test-keys`
+### Hooking detection
+- /proc/self/maps scan, TracerPID, Frida/Xposed/LSPosed markers
 
-### Emulator Detection
-
-تشخیص امولاتور با روش‌های:
-
-- خصوصیات Build (FINGERPRINT, MODEL, BRAND, HARDWARE)
-- فایل‌های مخصوص امولاتور (`/dev/qemu_pipe`, `/dev/vboxguest`)
-- خصوصیات سیستم (`ro.kernel.qemu`)
-- آدرس IP پیش‌فرض امولاتور (10.0.2.15)
-- تعداد سنسورهای کم
-- تشخیص Genymotion و VirtualBox
-
-### Hooking Detection
-
-تشخیص ابزارهای hooking:
-
-- اسکن `/proc/self/maps` برای کتابخانه‌های مشکوک
-- تشخیص Frida, Xposed, LSPosed
-- بررسی TracerPID در `/proc/self/status`
-
-## مدیریت خطاها
-
+## Error handling
 ```kotlin
 try {
     val report = securityModule.runAllChecksBlocking()
     handleReport(report)
 } catch (e: SecurityException) {
-    // مدیریت خطاهای امنیتی
-    Log.e("Security", "Security check failed", e)
-    // اقدام احتیاطی
-    fallbackSecurity()
+    // handle failure
 }
 ```
 
-## بهترین روش‌ها
+## Best practices
+- Tune thresholds for your risk appetite
+- Use model/brand overrides for known exceptions
+- Wire telemetry to your SIEM/analytics
+- Start/stop screenshot monitoring in lifecycle
 
-### 1. تنظیم آستانه‌ها
-- آستانه‌های پایین: حساسیت بالا، false positive بیشتر
-- آستانه‌های بالا: حساسیت کم، false negative بیشتر
+## Troubleshooting
+- Enable verbose telemetry in debug builds
+- Dump current signatures and compare with config
+- Test matrix: real device, emulator, rooted, VPN/proxy
 
-### 2. مدیریت Model Overrides
-```json
-{
-  "overrides": {
-    "allowedModels": ["SM-G973F", "Pixel 4"],
-    "deniedModels": ["generic"],
-    "allowedBrands": ["samsung", "google"],
-    "deniedBrands": ["unknown", "generic"]
-  }
-}
-```
+## Limitations & notes
+- Some emulators may bypass FLAG_SECURE (overlay/monitor helps)
+- Root detection can be constrained in modern OS/device variations
+- SYSTEM_ALERT_WINDOW requires user grant on Android 10+
 
-### 3. Telemetry و Monitoring
-```kotlin
-private val telemetry = object : TelemetrySink {
-    override fun onEvent(eventId: String, attributes: Map<String, String>) {
-        // ارسال به سیستم monitoring
-        Analytics.track(eventId, attributes)
-        
-        // لاگ محلی برای debug
-        if (BuildConfig.DEBUG) {
-            Log.d("SecurityTelemetry", "$eventId: $attributes")
-        }
-    }
-}
-```
+## Support
+- Min SDK: 21 (Android 5.0)
+- Target SDK: 34 (Android 14)
+- Language: Java 8 / Kotlin
+- Architectures: ARM64, ARM, x86, x86_64
 
-### 4. مدیریت چرخه حیات
-```kotlin
-class SecureActivity : Activity() {
-    private var captureMonitor: ScreenCaptureMonitor? = null
-    
-    override fun onResume() {
-        super.onResume()
-        // شروع مانیتورینگ
-        captureMonitor?.start { type, uri ->
-            handleCaptureAttempt(type)
-        }
-    }
-    
-    override fun onPause() {
-        super.onPause()
-        // توقف مانیتورینگ
-        captureMonitor?.stop()
-    }
-}
-```
+## License
+MIT License.
 
-## عیب‌یابی
-
-### فعال‌سازی لاگ‌های تشخیصی
-
-```kotlin
-// در محیط debug
-if (BuildConfig.DEBUG) {
-    val verboseTelemetry = object : TelemetrySink {
-        override fun onEvent(eventId: String, attributes: Map<String, String>) {
-            Log.v("SecurityDebug", "Event: $eventId")
-            attributes.forEach { (key, value) ->
-                Log.v("SecurityDebug", "  $key: $value")
-            }
-        }
-    }
-}
-```
-
-### بررسی امضاها
-
-```kotlin
-// چاپ امضای فعلی برای تنظیم کانفیگ
-val currentSignatures = SignatureVerifier.currentSigningSha256(this)
-Log.d("SignatureDebug", "Current signatures:")
-currentSignatures.forEach { signature ->
-    Log.d("SignatureDebug", signature)
-}
-```
-
-### تست در محیط‌های مختلف
-
-1. **دستگاه واقعی**: تست عملکرد طبیعی
-2. **امولاتور**: بررسی تشخیص امولاتور
-3. **دستگاه روت شده**: تست تشخیص روت
-4. **با VPN**: بررسی تشخیص VPN
-
-## محدودیت‌ها و نکات
-
-### محدودیت‌های فنی
-- برخی امولاتورها ممکن است FLAG_SECURE را دور بزنند
-- تشخیص روت در برخی روش‌های جدید ممکن است محدود باشد
-- دسترسی SYSTEM_ALERT_WINDOW در Android 10+ نیاز به اجازه کاربر دارد
-
-### نکات امنیتی
-- امضاها را هرگز در کد سخت‌کد نکنید
-- از obfuscation برای محافظت از منطق امنیتی استفاده کنید
-- به‌روزرسانی منظم کتابخانه برای مقابله با تهدیدات جدید
-
-## پشتیبانی
-
-- **حداقل SDK**: 21 (Android 5.0)
-- **هدف SDK**: 34 (Android 14)
-- **زبان هدف**: Java 8 / Kotlin
-- **معماری**: ARM64, ARM, x86, x86_64
-
-## مجوز
-
-این کتابخانه تحت مجوز MIT منتشر شده است.
-
----
-
-برای سوالات بیشتر یا گزارش مشکلات، لطفاً با تیم توسعه تماس بگیرید.
+For issues/questions, please open a GitHub issue.

@@ -1,0 +1,22 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Gradle build
+        run: ./gradlew :securitymodule:assembleDebug :security-sample:assembleDebug --stacktrace
+      - name: Run unit tests
+        run: ./gradlew :securitymodule:testDebugUnitTest --stacktrace
+
