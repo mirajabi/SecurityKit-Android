@@ -21,19 +21,222 @@ dependencyResolutionManagement {
 app/build.gradle:
 ```gradle
 dependencies {
-    implementation 'com.github.mirajabi:SecurityKit-Android:1.0.0'
+    implementation 'com.github.mirajabi:SecurityKit-Android:1.0.2'
 }
 ```
 
 ---
 
-Production-grade Android security toolkit for banking/fintech/POS apps.
+## Supported emulators/simulators (detection)
+- Android Studio/AOSP (QEMU: goldfish/ranchu)
+- Genymotion (VirtualBox)
+- BlueStacks (VBox/Hyper-V traces)
+- Nox
+- LDPlayer
+- MEmu
+- MuMu
+- Other VBox/QEMU derivatives
+
+Detection combines multiple signals: build/system properties, QEMU/VBox device files, /proc markers, default emulator IP (10.0.2.15), and low sensor count. Thresholds are configurable.
+
+## Quick use (Java)
+
+1) Add dependency via JitPack (above)
+2) Put `assets/security_config.json` (see sample below)
+3) In your Activity:
+```java
+import android.app.Activity;
+import android.os.Bundle;
+import com.miaadrajabi.securitymodule.SecurityModule;
+import com.miaadrajabi.securitymodule.SecurityFinding;
+import com.miaadrajabi.securitymodule.SecurityReport;
+import com.miaadrajabi.securitymodule.Severity;
+import com.miaadrajabi.securitymodule.config.SecurityConfig;
+import com.miaadrajabi.securitymodule.config.SecurityConfigLoader;
+import com.miaadrajabi.securitymodule.telemetry.TelemetrySink;
+
+public class MainActivity extends Activity {
+  private final TelemetrySink telemetry = new TelemetrySink() {
+    @Override public void onEvent(String eventId, java.util.Map<String,String> attrs) { }
+  };
+
+  @Override protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    SecurityConfig config = SecurityConfigLoader.fromAsset(this);
+    SecurityModule module = new SecurityModule.Builder(getApplicationContext())
+        .setConfig(config)
+        .setTelemetry(telemetry)
+        .build();
+    SecurityReport report = module.runAllChecksBlocking();
+    if (report.getOverallSeverity() == Severity.BLOCK) {
+      finish();
+      return;
+    }
+    // TODO: render your UI and optionally show findings
+  }
+}
+```
+
+## Java usage examples
+
+### Signature verification (populate config)
+```java
+java.util.List<String> sigs = com.miaadrajabi.securitymodule.detectors.SignatureVerifier
+    .currentSigningSha256(getApplicationContext());
+// Put these hashes into appIntegrity.expectedSignatureSha256 in your config JSON
+```
+
+### Screen capture protection
+```java
+import com.miaadrajabi.securitymodule.detectors.ScreenCaptureProtector;
+import com.miaadrajabi.securitymodule.detectors.ScreenCaptureMonitor;
+
+// Apply FLAG_SECURE
+ScreenCaptureProtector.applySecureFlag(this);
+// Monitor and show white overlay on attempt
+ScreenCaptureMonitor monitor = new ScreenCaptureMonitor(this);
+monitor.start((type, uri) -> {
+  ScreenCaptureProtector.showWhiteOverlay(this);
+});
+```
+
+### Crypto utilities (AES-GCM, hashing)
+```java
+import javax.crypto.SecretKey;
+import com.miaadrajabi.securitymodule.crypto.CryptoUtils;
+import com.miaadrajabi.securitymodule.crypto.KeystoreHelper;
+
+SecretKey key = KeystoreHelper.getOrCreateAesKey("my_secure_key");
+byte[] data = "hello".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+CryptoUtils.AesGcmResult res = CryptoUtils.encryptAesGcmResult(key, data, null);
+byte[] pt = CryptoUtils.decryptAesGcm(key, res.getIv(), res.getCiphertext());
+byte[] hash = CryptoUtils.sha256(data);
+boolean eq = CryptoUtils.constantTimeEquals(hash, hash);
+```
+
+### Certificate pinning (OkHttp)
+```java
+import okhttp3.OkHttpClient;
+import com.miaadrajabi.securitymodule.network.SecurityHttp;
+
+OkHttpClient client = SecurityHttp.createPinnedClient(
+  "api.mybank.com",
+  java.util.Arrays.asList("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="),
+  10_000, 15_000, 15_000
+);
+```
+
+### Encrypted preferences
+```java
+import com.miaadrajabi.securitymodule.storage.EncryptedPreferences;
+
+EncryptedPreferences prefs = EncryptedPreferences.create(getApplicationContext(), "secure_prefs");
+prefs.putString("token", "abc");
+String token = prefs.getString("token", null);
+```
+
+## Example security_config.json
+```json
+{
+  "features": {
+    "rootDetection": true,
+    "emulatorDetection": true,
+    "debuggerDetection": true,
+    "usbDebugDetection": true,
+    "vpnDetection": true,
+    "mitmDetection": true,
+    "screenCaptureProtection": true,
+    "appSignatureVerification": true,
+    "repackagingDetection": true
+  },
+  "thresholds": {
+    "emulatorSignalsToBlock": 2,
+    "rootSignalsToBlock": 2
+  },
+  "overrides": {
+    "allowedModels": ["SM-G973F"],
+    "deniedModels": [],
+    "allowedBrands": ["samsung"],
+    "deniedBrands": ["unknown"]
+  },
+  "policy": {
+    "onRoot": "BLOCK",
+    "onEmulator": "BLOCK",
+    "onDebugger": "WARN",
+    "onUsbDebug": "WARN",
+    "onVpn": "WARN",
+    "onMitm": "BLOCK"
+  },
+  "appIntegrity": {
+    "expectedPackageName": "com.yourcompany.yourapp",
+    "expectedSignatureSha256": [
+      "... your sha256 cert hash ..."
+    ]
+  },
+  "telemetry": { "enabled": true }
+}
+```
+
+## Full Java example
+```java
+package com.example;
+
+import android.app.Activity;
+import android.os.Bundle;
+import com.miaadrajabi.securitymodule.SecurityModule;
+import com.miaadrajabi.securitymodule.SecurityReport;
+import com.miaadrajabi.securitymodule.Severity;
+import com.miaadrajabi.securitymodule.config.SecurityConfig;
+import com.miaadrajabi.securitymodule.config.SecurityConfigLoader;
+import com.miaadrajabi.securitymodule.detectors.ScreenCaptureMonitor;
+import com.miaadrajabi.securitymodule.detectors.ScreenCaptureProtector;
+import com.miaadrajabi.securitymodule.telemetry.TelemetrySink;
+
+public class SecureActivity extends Activity {
+  private ScreenCaptureMonitor monitor;
+
+  private final TelemetrySink telemetry = new TelemetrySink() {
+    @Override public void onEvent(String id, java.util.Map<String,String> attrs) { }
+  };
+
+  @Override protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    SecurityConfig config = SecurityConfigLoader.fromAsset(this);
+    if (config.getFeatures().isScreenCaptureProtection()) {
+      ScreenCaptureProtector.applySecureFlag(this);
+      monitor = new ScreenCaptureMonitor(this);
+      monitor.start((type, uri) -> ScreenCaptureProtector.showWhiteOverlay(this));
+    }
+
+    SecurityModule module = new SecurityModule.Builder(getApplicationContext())
+        .setConfig(config)
+        .setTelemetry(telemetry)
+        .build();
+
+    SecurityReport report = module.runAllChecksBlocking();
+    if (report.getOverallSeverity() == Severity.BLOCK) {
+      finish();
+      return;
+    }
+
+    // TODO render content
+  }
+
+  @Override protected void onDestroy() {
+    if (monitor != null) monitor.stop();
+    super.onDestroy();
+  }
+}
+```
+
+---
 
 ## Features
 
 ### 🛡️ Device Integrity
 - Root detection (multi-signal)
-- Emulator detection (Android Studio, Genymotion, BlueStacks)
+- Emulator detection (Android Studio, Genymotion, BlueStacks, Nox, LDPlayer, MEmu, MuMu, VBox/QEMU variants)
 - Debugger detection
 - USB debug detection
 - VPN detection
@@ -85,170 +288,7 @@ The library manifest adds:
 
 ## Configuration
 
-### Create config JSON (assets/security_config.json)
-```json
-{
-  "features": {
-    "rootDetection": true,
-    "emulatorDetection": true,
-    "debuggerDetection": true,
-    "usbDebugDetection": true,
-    "vpnDetection": true,
-    "mitmDetection": true,
-    "screenCaptureProtection": true,
-    "appSignatureVerification": true,
-    "repackagingDetection": true
-  },
-  "thresholds": {
-    "emulatorSignalsToBlock": 2,
-    "rootSignalsToBlock": 2
-  },
-  "overrides": {
-    "allowedModels": ["SM-G973F"],
-    "deniedModels": [],
-    "allowedBrands": ["samsung"],
-    "deniedBrands": ["unknown"]
-  },
-  "policy": {
-    "onRoot": "BLOCK",
-    "onEmulator": "BLOCK",
-    "onDebugger": "WARN",
-    "onUsbDebug": "WARN",
-    "onVpn": "WARN",
-    "onMitm": "BLOCK"
-  },
-  "appIntegrity": {
-    "expectedPackageName": "com.yourcompany.yourapp",
-    "expectedSignatureSha256": [
-      "A1:B2:C3:D4:E5:F6:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90"
-    ]
-  },
-  "telemetry": {
-    "enabled": true
-  }
-}
-```
-
-### Policy
-- Actions: ALLOW / WARN / DEGRADE / BLOCK / TERMINATE
-- Thresholds: `emulatorSignalsToBlock`, `rootSignalsToBlock`
-
-## Signature Verification
-
-### 1) Get current signature(s)
-```kotlin
-val signatures = SignatureVerifier.currentSigningSha256(context)
-signatures.forEach { Log.d("Signature", "SHA256: $it") }
-```
-
-### 2) Put into config
-```json
-{
-  "appIntegrity": {
-    "expectedPackageName": "com.yourcompany.yourapp",
-    "expectedSignatureSha256": [
-      "1A2B3C4D5E6F7890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890",
-      "FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321FEDCBA0987654321"
-    ]
-  },
-  "features": {
-    "appSignatureVerification": true
-  }
-}
-```
-
-### 3) Generate per environment
-Debug keystore:
-```bash
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-```
-Release keystore:
-```bash
-keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
-```
-
-### 4) Runtime verification
-```kotlin
-val actual = SignatureVerifier.currentSigningSha256(context)
-val expected = config.appIntegrity.expectedSignatureSha256
-val isValid = actual.any { a -> expected.any { it.equals(a, ignoreCase = true) } }
-if (!isValid) {
-    // take action (block/terminate)
-}
-```
-
-## Usage
-
-### Basic setup
-```kotlin
-class MainActivity : Activity() {
-    private val telemetry = object : TelemetrySink {
-        override fun onEvent(eventId: String, attributes: Map<String, String>) {}
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val config = SecurityConfigLoader.fromAsset(this)
-        val securityModule = SecurityModule.Builder(applicationContext)
-            .setConfig(config)
-            .setTelemetry(telemetry)
-            .build()
-        val report = securityModule.runAllChecksBlocking()
-        when (report.overallSeverity) {
-            Severity.OK -> setupNormalUI()
-            Severity.WARN -> { showWarningBanner(report.findings); setupNormalUI() }
-            Severity.BLOCK -> return
-        }
-    }
-}
-```
-
-### Async checks
-```kotlin
-lifecycleScope.launch {
-    val report = securityModule.runAllChecks()
-    handleSecurityReport(report)
-}
-```
-
-### Screen capture protection
-```kotlin
-if (config.features.screenCaptureProtection) {
-    ScreenCaptureProtector.applySecureFlag(this)
-    val monitor = ScreenCaptureMonitor(this)
-    monitor.start { type, uri ->
-        ScreenCaptureProtector.showWhiteOverlay(this@Activity)
-        telemetry.onEvent("screenshot_attempt", mapOf("type" to type.name))
-    }
-}
-```
-
-### Crypto utilities
-```kotlin
-val key = KeystoreHelper.getOrCreateAesKey("my_secure_key")
-val plaintext = "sensitive data".toByteArray()
-val (iv, ciphertext) = CryptoUtils.encryptAesGcm(key, plaintext)
-val decrypted = CryptoUtils.decryptAesGcm(key, iv, ciphertext)
-val hash = CryptoUtils.sha256(plaintext)
-val isEqual = CryptoUtils.constantTimeEquals(hash, hash)
-```
-
-### Certificate pinning
-```kotlin
-val pinnedClient = SecurityHttp.createPinnedClient(
-    hostname = "api.mybank.com",
-    sha256Pins = listOf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-                       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=")
-)
-val retrofit = Retrofit.Builder().client(pinnedClient).baseUrl("https://api.mybank.com/").build()
-```
-
-### Encrypted storage
-```kotlin
-val securePrefs = EncryptedPreferences.create(context, "secure_data")
-securePrefs.putString("sensitive_token", userToken)
-val token = securePrefs.getString("sensitive_token", null)
-```
+(see example JSON above)
 
 ## Threat detections
 
@@ -262,16 +302,6 @@ val token = securePrefs.getString("sensitive_token", null)
 
 ### Hooking detection
 - /proc/self/maps scan, TracerPID, Frida/Xposed/LSPosed markers
-
-## Error handling
-```kotlin
-try {
-    val report = securityModule.runAllChecksBlocking()
-    handleReport(report)
-} catch (e: SecurityException) {
-    // handle failure
-}
-```
 
 ## Best practices
 - Tune thresholds for your risk appetite
