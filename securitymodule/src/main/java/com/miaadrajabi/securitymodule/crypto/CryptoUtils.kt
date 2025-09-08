@@ -23,14 +23,16 @@ object CryptoUtils {
         }
     }
 
+    class AesGcmResult(val iv: ByteArray, val ciphertext: ByteArray)
+
     // Hashing
-    fun sha256(data: ByteArray): ByteArray = hash("SHA-256", data)
-    fun sha384(data: ByteArray): ByteArray = hash("SHA-384", data)
-    fun sha512(data: ByteArray): ByteArray = hash("SHA-512", data)
+    @JvmStatic fun sha256(data: ByteArray): ByteArray = hash("SHA-256", data)
+    @JvmStatic fun sha384(data: ByteArray): ByteArray = hash("SHA-384", data)
+    @JvmStatic fun sha512(data: ByteArray): ByteArray = hash("SHA-512", data)
 
     private fun hash(algorithm: String, data: ByteArray): ByteArray = MessageDigest.getInstance(algorithm).digest(data)
 
-    fun constantTimeEquals(a: ByteArray, b: ByteArray): Boolean {
+    @JvmStatic fun constantTimeEquals(a: ByteArray, b: ByteArray): Boolean {
         if (a.size != b.size) return false
         var result = 0
         for (i in a.indices) {
@@ -40,13 +42,13 @@ object CryptoUtils {
     }
 
     // AES-GCM
-    fun generateAesKeyGcm(): SecretKey {
+    @JvmStatic fun generateAesKeyGcm(): SecretKey {
         val kg = KeyGenerator.getInstance("AES")
         kg.init(256)
         return kg.generateKey()
     }
 
-    fun encryptAesGcm(key: SecretKey, plaintext: ByteArray, aad: ByteArray? = null): Pair<ByteArray, ByteArray> {
+    @JvmStatic fun encryptAesGcm(key: SecretKey, plaintext: ByteArray, aad: ByteArray? = null): Pair<ByteArray, ByteArray> {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         // For Android Keystore-backed AES-GCM keys, provider must generate a random IV
         cipher.init(Cipher.ENCRYPT_MODE, key)
@@ -56,7 +58,12 @@ object CryptoUtils {
         return iv to ciphertext
     }
 
-    fun decryptAesGcm(key: SecretKey, iv: ByteArray, ciphertext: ByteArray, aad: ByteArray? = null): ByteArray {
+    @JvmStatic fun encryptAesGcmResult(key: SecretKey, plaintext: ByteArray, aad: ByteArray? = null): AesGcmResult {
+        val (iv, ct) = encryptAesGcm(key, plaintext, aad)
+        return AesGcmResult(iv, ct)
+    }
+
+    @JvmStatic fun decryptAesGcm(key: SecretKey, iv: ByteArray, ciphertext: ByteArray, aad: ByteArray? = null): ByteArray {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
         if (aad != null) cipher.updateAAD(aad)
@@ -64,7 +71,7 @@ object CryptoUtils {
     }
 
     // AES-CBC with HMAC-SHA256 integrity (legacy)
-    fun encryptAesCbc(key: SecretKey, plaintext: ByteArray): Pair<ByteArray, ByteArray> {
+    @JvmStatic fun encryptAesCbc(key: SecretKey, plaintext: ByteArray): Pair<ByteArray, ByteArray> {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         val iv = ByteArray(16)
         SecureRandom().nextBytes(iv)
@@ -73,20 +80,20 @@ object CryptoUtils {
         return iv to ciphertext
     }
 
-    fun decryptAesCbc(key: SecretKey, iv: ByteArray, ciphertext: ByteArray): ByteArray {
+    @JvmStatic fun decryptAesCbc(key: SecretKey, iv: ByteArray, ciphertext: ByteArray): ByteArray {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.DECRYPT_MODE, key, IvParameterSpec(iv))
         return cipher.doFinal(ciphertext)
     }
 
     // RSA (OAEP recommended)
-    fun generateRsaKeyPair(bits: Int = 2048): KeyPair {
+    @JvmStatic fun generateRsaKeyPair(bits: Int = 2048): KeyPair {
         val kpg = KeyPairGenerator.getInstance("RSA")
         kpg.initialize(bits)
         return kpg.generateKeyPair()
     }
 
-    fun rsaEncryptOaep(publicKeyBytes: ByteArray, plaintext: ByteArray): ByteArray {
+    @JvmStatic fun rsaEncryptOaep(publicKeyBytes: ByteArray, plaintext: ByteArray): ByteArray {
         val kf = KeyFactory.getInstance("RSA")
         val publicKey = kf.generatePublic(X509EncodedKeySpec(publicKeyBytes))
         val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
@@ -94,7 +101,7 @@ object CryptoUtils {
         return cipher.doFinal(plaintext)
     }
 
-    fun rsaDecryptOaep(privateKeyBytes: ByteArray, ciphertext: ByteArray): ByteArray {
+    @JvmStatic fun rsaDecryptOaep(privateKeyBytes: ByteArray, ciphertext: ByteArray): ByteArray {
         val kf = KeyFactory.getInstance("RSA")
         val privateKey = kf.generatePrivate(PKCS8EncodedKeySpec(privateKeyBytes))
         val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")

@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Security Sample</string>
-    <string name="warning_banner">هشدار امنیتی: برخی شاخص‌ها شناسایی شدند.</string>
+    <string name="warning_banner">Security warning: Some indicators detected.</string>
 </resources>
 

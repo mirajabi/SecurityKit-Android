@@ -28,7 +28,7 @@ class MainActivity : Activity() {
             ScreenCaptureProtector.applySecureFlag(this)
             captureMonitor = ScreenCaptureMonitor(this)
             captureMonitor.start { type, uri ->
-                // نمایش overlay سفید هنگام تشخیص اسکرین‌شات/ریکورد
+                // Show white overlay when screenshot/recording detected
                 ScreenCaptureProtector.showWhiteOverlay(this@MainActivity)
             }
         }

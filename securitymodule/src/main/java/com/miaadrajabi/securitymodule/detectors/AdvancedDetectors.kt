@@ -54,11 +54,11 @@ object ScreenCaptureProtector {
     private var overlayView: View? = null
     private var windowManager: WindowManager? = null
 
-    fun applySecureFlag(activity: Activity) {
+    @JvmStatic fun applySecureFlag(activity: Activity) {
         activity.window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
     }
 
-    fun showWhiteOverlay(context: Context) {
+    @JvmStatic fun showWhiteOverlay(context: Context) {
         if (overlayView != null) return
         try {
             windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -70,7 +70,7 @@ object ScreenCaptureProtector {
             }
             
             val text = TextView(context).apply {
-                text = "محتوای محافظت شده"
+                text = "Protected content"
                 textSize = 24f
                 setTextColor(Color.BLACK)
                 gravity = Gravity.CENTER
@@ -93,16 +93,16 @@ object ScreenCaptureProtector {
             windowManager?.addView(overlay, params)
             overlayView = overlay
 
-            // خودکار حذف بعد از 3 ثانیه
+            // Auto-remove after 3 seconds
             Handler(Looper.getMainLooper()).postDelayed({
                 hideWhiteOverlay()
             }, 3000)
         } catch (e: Exception) {
-            // در صورت عدم دسترسی overlay، حداقل FLAG_SECURE کافی است
+            // If overlay not permitted, FLAG_SECURE still helps
         }
     }
 
-    fun hideWhiteOverlay() {
+    @JvmStatic fun hideWhiteOverlay() {
         try {
             overlayView?.let { view ->
                 windowManager?.removeView(view)

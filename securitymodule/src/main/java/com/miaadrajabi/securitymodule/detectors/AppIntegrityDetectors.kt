@@ -6,7 +6,7 @@ import android.os.Build
 import com.miaadrajabi.securitymodule.crypto.CryptoUtils
 
 object SignatureVerifier {
-    fun currentSigningSha256(context: Context): List<String> {
+    @JvmStatic fun currentSigningSha256(context: Context): List<String> {
         return try {
             val pm = context.packageManager
             val pkgName = context.packageName

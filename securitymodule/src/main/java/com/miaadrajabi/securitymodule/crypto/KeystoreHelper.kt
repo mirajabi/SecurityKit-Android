@@ -10,7 +10,7 @@ object KeystoreHelper {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val DEFAULT_ALIAS = "SecurityModule.AESGCM"
 
-    fun getOrCreateAesKey(alias: String = DEFAULT_ALIAS): SecretKey {
+    @JvmStatic fun getOrCreateAesKey(alias: String = DEFAULT_ALIAS): SecretKey {
         return if (Build.VERSION.SDK_INT >= 23) {
             try {
                 val ks = KeyStore.getInstance(ANDROID_KEYSTORE)

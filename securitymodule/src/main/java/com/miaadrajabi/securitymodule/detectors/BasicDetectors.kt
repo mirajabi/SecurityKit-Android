@@ -8,6 +8,7 @@ import android.os.Debug
 import android.provider.Settings
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 import java.io.InputStreamReader
 import java.net.NetworkInterface
 
@@ -95,23 +96,40 @@ object EmulatorDetector {
         } catch (t: Throwable) { null }
     }
 
-    fun signals(context: Context? = null): Int {
+    data class EmulatorSignals(val count: Int, val reasons: List<String>)
+
+    private fun addIfTrue(reasons: MutableList<String>, reason: String, condition: Boolean, counter: () -> Unit) {
+        if (condition) {
+            reasons.add(reason)
+            counter()
+        }
+    }
+
+    fun collectSignals(context: Context? = null): EmulatorSignals {
         var count = 0
+        val reasons = mutableListOf<String>()
         // Build properties
-        if (Build.FINGERPRINT?.startsWith("generic") == true || Build.FINGERPRINT?.contains("vbox") == true) count++
-        if (Build.MODEL?.contains("Emulator", true) == true || Build.MODEL?.contains("Android SDK built for x86", true) == true) count++
-        if ((Build.BRAND?.startsWith("generic") == true && Build.DEVICE?.startsWith("generic") == true) || Build.PRODUCT?.contains("sdk") == true) count++
-        if (Build.HARDWARE?.contains("goldfish") == true || Build.HARDWARE?.contains("ranchu") == true || Build.HARDWARE?.contains("vbox") == true || Build.HARDWARE?.contains("vbox86") == true) count++
-        if (Build.MANUFACTURER?.contains("Genymotion", true) == true || Build.MODEL?.contains("Genymotion", true) == true) count++
+        addIfTrue(reasons, "fingerprint.generic/vbox", (Build.FINGERPRINT?.startsWith("generic") == true || (Build.FINGERPRINT?.contains("vbox") == true))) { count++ }
+        val modelLc = Build.MODEL?.lowercase() ?: ""
+        addIfTrue(reasons, "model.emulator", (modelLc.contains("emulator") || modelLc.contains("android sdk built for x86") || modelLc.contains("sdk_gphone") || modelLc.contains("vbox86") || modelLc.contains("aosp on ia emulator"))) { count++ }
+        addIfTrue(reasons, "brand/device.generic", ((Build.BRAND?.startsWith("generic") == true && Build.DEVICE?.startsWith("generic") == true) || (Build.PRODUCT?.contains("sdk") == true))) { count++ }
+        val hw = Build.HARDWARE?.lowercase() ?: ""
+        addIfTrue(reasons, "hardware.emu", (hw.contains("goldfish") || hw.contains("ranchu") || hw.contains("vbox") || hw.contains("vbox86"))) { count++ }
+        val manLc = Build.MANUFACTURER?.lowercase() ?: ""
+        addIfTrue(reasons, "manufacturer.genymotion", (manLc.contains("genymotion") || modelLc.contains("genymotion"))) { count++ }
 
         // Files/Devices
-        if (File("/dev/socket/qemud").exists() || File("/dev/qemu_pipe").exists()) count++
-        if (File("/system/lib/libc_malloc_debug_qemu.so").exists() || File("/sys/qemu_trace").exists() || File("/init.goldfish.rc").exists()) count++
-        if (File("/dev/vboxguest").exists() || File("/dev/vboxuser").exists()) count++
+        addIfTrue(reasons, "file.qemu_pipe", (File("/dev/qemu_pipe").exists() || File("/dev/socket/qemud").exists())) { count++ }
+        addIfTrue(reasons, "file.qemu_traces", (File("/system/lib/libc_malloc_debug_qemu.so").exists() || File("/sys/qemu_trace").exists() || File("/init.goldfish.rc").exists())) { count++ }
+        addIfTrue(reasons, "file.genyd", (File("/dev/socket/genyd").exists() || File("/dev/socket/baseband_genyd").exists())) { count++ }
+        addIfTrue(reasons, "file.vbox", (File("/dev/vboxguest").exists() || File("/dev/vboxuser").exists() || File("/ueventd.android_x86.rc").exists() || File("/init.vbox86.rc").exists() || File("/fstab.vbox86").exists())) { count++ }
 
         // System properties
-        val qemu = getProp("ro.kernel.qemu"); if (qemu == "1") count++
-        val hardware = getProp("ro.hardware"); if (hardware?.contains("goldfish") == true || hardware?.contains("ranchu") == true || hardware?.contains("vbox") == true) count++
+        val qemu = getProp("ro.kernel.qemu"); addIfTrue(reasons, "prop.ro.kernel.qemu=1", (qemu == "1")) { count++ }
+        val hardwareProp = getProp("ro.hardware")?.lowercase() ?: ""
+        addIfTrue(reasons, "prop.ro.hardware.emu", (hardwareProp.contains("goldfish") || hardwareProp.contains("ranchu") || hardwareProp.contains("vbox"))) { count++ }
+        val productModel = getProp("ro.product.model")?.lowercase() ?: ""
+        addIfTrue(reasons, "prop.ro.product.model.emu", (productModel.contains("google_sdk") || productModel.contains("emulator") || productModel.contains("vbox"))) { count++ }
 
         // Emulator default IP
         try {
@@ -122,7 +140,7 @@ object EmulatorDetector {
                     while (addrs.hasMoreElements()) {
                         val addr = addrs.nextElement()
                         val host = addr.hostAddress ?: ""
-                        if (host == "10.0.2.15") { count++; break }
+                        if (host == "10.0.2.15") { reasons.add("net.ip=10.0.2.15"); count++; break }
                     }
                 }
             }
@@ -133,12 +151,34 @@ object EmulatorDetector {
             if (context != null) {
                 val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
                 val sensors = sm?.getSensorList(Sensor.TYPE_ALL)?.size ?: 0
-                if (sensors <= 5) count++
+                if (sensors <= 5) { reasons.add("sensors.count<=5"); count++ }
             }
         } catch (_: Throwable) { }
 
-        return count
+        // /proc markers
+        try {
+            val tty = File("/proc/tty/drivers")
+            if (tty.canRead()) {
+                BufferedReader(FileReader(tty)).use { br ->
+                    val content = br.readText().lowercase()
+                    if (content.contains("goldfish") || content.contains("qemu")) { reasons.add("proc.tty.goldfish/qemu"); count++ }
+                }
+            }
+        } catch (_: Throwable) { }
+        try {
+            val cpu = File("/proc/cpuinfo")
+            if (cpu.canRead()) {
+                BufferedReader(FileReader(cpu)).use { br ->
+                    val content = br.readText().lowercase()
+                    if (content.contains("goldfish") || content.contains("qemu") || content.contains("virtualbox")) { reasons.add("proc.cpu.qemu/vbox"); count++ }
+                }
+            }
+        } catch (_: Throwable) { }
+
+        return EmulatorSignals(count, reasons)
     }
+
+    fun signals(context: Context? = null): Int = collectSignals(context).count
 }
 
 object DebuggerDetector {

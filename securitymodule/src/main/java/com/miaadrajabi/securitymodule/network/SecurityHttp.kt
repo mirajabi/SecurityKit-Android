@@ -5,7 +5,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object SecurityHttp {
-    fun createPinnedClient(
+    @JvmStatic fun createPinnedClient(
         hostname: String,
         sha256Pins: List<String>,
         connectTimeoutMs: Long = 10_000,

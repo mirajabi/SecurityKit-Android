@@ -11,7 +11,7 @@ class EncryptedPreferences private constructor(
     private val key: SecretKey
 ) {
     companion object {
-        fun create(context: Context, name: String = "secure_prefs"): EncryptedPreferences {
+        @JvmStatic fun create(context: Context, name: String = "secure_prefs"): EncryptedPreferences {
             val prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE)
             val key = CryptoUtils.generateAesKeyGcm()
             return EncryptedPreferences(prefs, key)
