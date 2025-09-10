@@ -1,0 +1,48 @@
+title: SecurityModule (Android)
+description: Production-grade Android security toolkit for banking/fintech/POS
+theme: jekyll-theme-cayman
+markdown: kramdown
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+navbar:
+  - name: Home
+    link: /
+  - name: Installation
+    link: /installation
+  - name: Configuration
+    link: /configuration
+  - name: Policy
+    link: /policy
+  - name: Device Integrity
+    link: /device-integrity
+  - name: App Integrity
+    link: /app-integrity
+  - name: Screen Capture
+    link: /screen-capture
+  - name: Crypto
+    link: /crypto
+  - name: Keystore
+    link: /keystore
+  - name: Runtime Protections
+    link: /runtime-protections
+  - name: Tamper Evidence
+    link: /tamper-evidence
+  - name: Play Integrity
+    link: /play-integrity
+  - name: Telemetry
+    link: /telemetry
+  - name: Examples (Kotlin)
+    link: /examples-kotlin
+  - name: Examples (Java)
+    link: /examples-java
+  - name: Troubleshooting
+    link: /troubleshooting
+  - name: Best Practices
+    link: /best-practices
+
