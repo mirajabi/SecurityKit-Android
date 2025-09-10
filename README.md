@@ -1,4 +1,4 @@
-# SecurityModule - Android Security Library
+# SecurityModule - Android Security Library (v1.1.0)
 
 Production-grade Android security toolkit for banking/fintech/POS apps.
 
@@ -57,7 +57,7 @@ dependencyResolutionManagement {
 app/build.gradle:
 ```gradle
 dependencies {
-    implementation 'com.github.mirajabi:SecurityKit-Android:1.0.2'
+    implementation 'com.github.mirajabi:SecurityKit-Android:1.1.0'
 }
 ```
 
