@@ -1,7 +1,10 @@
 package com.miaadrajabi.securitymodule
 
 import android.content.Context
+import com.miaadrajabi.securitymodule.config.ConfigIntegrity
 import com.miaadrajabi.securitymodule.config.SecurityConfig
+import com.miaadrajabi.securitymodule.crypto.KeystoreHelper
+import com.miaadrajabi.securitymodule.detectors.AppIntegrityDetector
 import com.miaadrajabi.securitymodule.detectors.DebuggerDetector
 import com.miaadrajabi.securitymodule.detectors.DeveloperOptionsDetector
 import com.miaadrajabi.securitymodule.detectors.HookingDetector
@@ -18,9 +21,11 @@ import com.miaadrajabi.securitymodule.detectors.VpnDetector
 import com.miaadrajabi.securitymodule.detectors.BusyBoxDetector
 import com.miaadrajabi.securitymodule.detectors.MountFlagsDetector
 import com.miaadrajabi.securitymodule.detectors.QemuDetector
+import com.miaadrajabi.securitymodule.integrity.PlayIntegrityClient
 import com.miaadrajabi.securitymodule.policy.PolicyDecision
 import com.miaadrajabi.securitymodule.policy.PolicyEngine
 import com.miaadrajabi.securitymodule.policy.PolicyExecutor
+import com.miaadrajabi.securitymodule.storage.TamperEvidenceStore
 import com.miaadrajabi.securitymodule.telemetry.NoopTelemetry
 import com.miaadrajabi.securitymodule.telemetry.TelemetryEvents
 import com.miaadrajabi.securitymodule.telemetry.TelemetrySink
@@ -45,12 +50,108 @@ class SecurityModule private constructor(
         // Model/brand overrides: early allowlist/denylist gates
         val model = android.os.Build.MODEL ?: ""
         val brand = android.os.Build.BRAND ?: ""
-        if (config.overrides.deniedModels.contains(model) || config.overrides.deniedBrands.contains(brand)) {
+        val manufacturer = android.os.Build.MANUFACTURER ?: ""
+        val product = android.os.Build.PRODUCT ?: ""
+        val device = android.os.Build.DEVICE ?: ""
+        val board = android.os.Build.BOARD ?: ""
+        
+        // Check denied overrides first
+        if (config.overrides.deniedModels.contains(model) || 
+            config.overrides.deniedBrands.contains(brand)) {
             findings.add(SecurityFinding("override", "Denied model/brand", Severity.BLOCK))
             executor.execute(SecurityConfig.Action.BLOCK)
             return SecurityReport(findings, Severity.BLOCK)
         }
+        
+        // Check allowed overrides - if device matches, skip all security checks
+        val isAllowedDevice = config.overrides.allowedModels.contains(model) ||
+                             config.overrides.allowedBrands.contains(brand) ||
+                             config.overrides.allowedManufacturers.contains(manufacturer) ||
+                             config.overrides.allowedProducts.contains(product) ||
+                             config.overrides.allowedDevices.contains(device) ||
+                             config.overrides.allowedBoards.contains(board)
+        
+        if (isAllowedDevice) {
+            findings.add(SecurityFinding("override", "Allowed device - bypassing security checks", Severity.OK))
+            return SecurityReport(findings, Severity.OK)
+        }
 
+        // Advanced features checks
+        if (config.features.playIntegrityCheck && config.advanced.playIntegrity.enabled) {
+            try {
+                val integrityResult = kotlinx.coroutines.runBlocking {
+                    PlayIntegrityClient.checkIntegrity(applicationContext, config.advanced.playIntegrity.nonce)
+                }
+                val playIntegrityFindings = PlayIntegrityClient.toSecurityFindings(integrityResult)
+                findings.addAll(playIntegrityFindings)
+                
+                val hasBlockingFindings = playIntegrityFindings.any { it.severity == Severity.BLOCK }
+                if (hasBlockingFindings) {
+                    executor.execute(config.policy.onPlayIntegrityFailure)
+                }
+            } catch (e: Exception) {
+                findings.add(SecurityFinding("play_integrity_error", "Play Integrity check failed", Severity.WARN))
+            }
+        }
+
+        if (config.features.advancedAppIntegrity) {
+            try {
+                val appIntegrityConfig = AppIntegrityDetector.AppIntegrityConfig(
+                    expectedPackageName = config.appIntegrity.expectedPackageName ?: applicationContext.packageName,
+                    expectedSigningHashes = config.appIntegrity.expectedSignatureSha256.toSet(),
+                    allowedInstallers = config.appIntegrity.allowedInstallers.toSet(),
+                    expectedDexChecksums = config.appIntegrity.expectedDexChecksums,
+                    expectedSoChecksums = config.appIntegrity.expectedSoChecksums
+                )
+                val appIntegrityFindings = AppIntegrityDetector.checkAppIntegrity(applicationContext, appIntegrityConfig)
+                findings.addAll(appIntegrityFindings)
+                
+                val hasBlockingFindings = appIntegrityFindings.any { it.severity == Severity.BLOCK }
+                if (hasBlockingFindings) {
+                    executor.execute(config.policy.onAppIntegrityFailure)
+                }
+            } catch (e: Exception) {
+                findings.add(SecurityFinding("app_integrity_error", "Advanced app integrity check failed", Severity.WARN))
+            }
+        }
+
+        // Keystore advanced features
+        if (config.features.strongBoxKeys) {
+            val strongBoxAvailable = KeystoreHelper.isStrongBoxAvailable()
+            if (!strongBoxAvailable) {
+                findings.add(SecurityFinding("strongbox_unavailable", "StrongBox not available", Severity.WARN))
+                executor.execute(config.policy.onStrongBoxUnavailable)
+            } else {
+                findings.add(SecurityFinding("strongbox_available", "StrongBox available", Severity.OK))
+            }
+        }
+
+        if (config.features.deviceBinding) {
+            try {
+                val deviceBindingId = KeystoreHelper.generateDeviceBindingId(applicationContext)
+                findings.add(SecurityFinding("device_binding", "Device binding ID generated", Severity.OK, 
+                    mapOf("binding_id" to deviceBindingId.take(16) + "...")))
+            } catch (e: Exception) {
+                findings.add(SecurityFinding("device_binding_error", "Device binding failed", Severity.WARN))
+            }
+        }
+
+        // Tamper evidence check
+        if (config.features.tamperEvidence) {
+            try {
+                val isConfigValid = kotlinx.coroutines.runBlocking {
+                    TamperEvidenceStore.isDataValid(applicationContext, "security_config", "1.0")
+                }
+                if (!isConfigValid) {
+                    findings.add(SecurityFinding("config_tampering", "Configuration tampering detected", Severity.BLOCK))
+                    executor.execute(config.policy.onConfigTampering)
+                }
+            } catch (e: Exception) {
+                findings.add(SecurityFinding("tamper_evidence_error", "Tamper evidence check failed", Severity.WARN))
+            }
+        }
+
+        // Basic security checks
         if (config.features.rootDetection) {
             val count = RootDetector.signals(applicationContext)
             val decision: PolicyDecision = policy.onRoot(count)
@@ -126,6 +227,7 @@ class SecurityModule private constructor(
             }
         }
 
+        // Additional security indicators
         if (TracerPidDetector.isTraced()) {
             findings.add(SecurityFinding("tracer", "Process is traced", Severity.WARN))
         }

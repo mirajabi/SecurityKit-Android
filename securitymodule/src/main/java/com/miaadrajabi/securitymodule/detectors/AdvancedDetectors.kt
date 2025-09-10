@@ -1,5 +1,6 @@
 package com.miaadrajabi.securitymodule.detectors
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
@@ -50,6 +51,7 @@ object MitmDetector {
     }
 }
 
+@SuppressLint("StaticFieldLeak")
 object ScreenCaptureProtector {
     private var overlayView: View? = null
     private var windowManager: WindowManager? = null
@@ -81,10 +83,14 @@ object ScreenCaptureProtector {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                else WindowManager.LayoutParams.TYPE_PHONE,
+                else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 PixelFormat.TRANSLUCENT
             )

@@ -2,6 +2,42 @@
 
 Production-grade Android security toolkit for banking/fintech/POS apps.
 
+---
+
+## Features
+
+### 🛡️ Device Integrity
+- Root detection (multi-signal: su/magisk files, mount flags, test-keys, BusyBox, etc.)
+- Emulator detection (Android Studio, Genymotion, BlueStacks, Nox, LDPlayer, MEmu, MuMu, VBox/QEMU variants)
+- Debugger/ptrace detection, TracerPID
+- USB debug detection, Developer Options
+- VPN/Proxy/MITM indicators
+
+### 🔐 App Integrity
+- Signature verification (v2/v3/v4 aware via SigningInfo/legacy)
+- Repackaging detection (package name, installer source)
+- APK integrity: DEX checksums (`expectedDexChecksums`) and native libs checksums (`expectedSoChecksums`)
+
+### 🚫 Runtime Protections
+- Anti-hooking/instrumentation (Frida/Xposed markers, suspicious loaded libs)
+- Screen capture protection: FLAG_SECURE + active monitor + white overlay workaround
+
+### 🔒 Cryptography
+- Hashing: SHA-256/384/512, constant-time equals
+- Symmetric: AES-GCM/AES-CBC (Android Keystore backed)
+- Asymmetric: RSA-OAEP
+- Secure storage: EncryptedPreferences
+
+### ⚙️ Configuration & Policy Engine
+- JSON-based `security_config.json`
+- Actions per signal: ALLOW, WARN, BLOCK, TERMINATE
+- Thresholds and device overrides (model/brand/manufacturer/product/device/board)
+
+### ✅ Signed Configuration (New)
+- Optional signed-config loading (HMAC-SHA256 over RAW JSON) for tamper-evidence
+- Simple loader: `SecurityConfigLoader.fromAssetPreferSigned(...)`
+- Cross-platform signing scripts included
+
 ## JitPack (online implementation)
 
 Add JitPack repository and dependency:
@@ -329,3 +365,77 @@ The library manifest adds:
 MIT License.
 
 For issues/questions, please open a GitHub issue.
+
+---
+
+## Step-by-step integration (Kotlin)
+
+1) Add dependency (JitPack or module include)
+2) Create `assets/security_config.json` (copy sample above)
+3) (Optional) Sign your config
+   - macOS/Linux:
+     ```bash
+     CONFIG_HMAC_KEY="your-secret" ./scripts/sign-config-hmac.sh \
+       --config security-sample/src/main/assets/security_config.json \
+       --out    security-sample/src/main/assets/security_config.sig
+     ```
+   - Windows PowerShell:
+     ```powershell
+     $env:CONFIG_HMAC_KEY="your-secret"
+     py scripts\sign_config_hmac.py --config security-sample\src\main\assets\security_config.json `
+       --key-env CONFIG_HMAC_KEY --out security-sample\src\main\assets\security_config.sig
+     ```
+4) Provide HMAC key at runtime
+   - Demo: `CONFIG_HMAC_KEY=your-secret ./gradlew :security-sample:assembleDebug`
+   - Prod: fetch from secure source; pass to loader
+5) Load config (prefers signed) and run checks:
+   ```kotlin
+   val hmacKey = BuildConfig.CONFIG_HMAC_KEY
+   val config = SecurityConfigLoader.fromAssetPreferSigned(
+       this, "security_config.json", "security_config.sig",
+       hmacKey.ifEmpty { null }
+   )
+   val module = SecurityModule.Builder(applicationContext)
+       .setConfig(config)
+       .build()
+   val report = module.runAllChecksBlocking()
+   if (report.overallSeverity != Severity.OK) {
+       ReportActivity.start(this, report, config)
+       finish()
+   }
+   ```
+6) Screen-capture protection:
+   ```kotlin
+   if (config.features.screenCaptureProtection) {
+       ScreenCaptureProtector.applySecureFlag(this)
+       ScreenCaptureMonitor(this).start { _, _ ->
+           ScreenCaptureProtector.showWhiteOverlay(this)
+       }
+   }
+   ```
+
+## Step-by-step integration (Java)
+
+1) Add dependency and config as above
+2) Sign config (same commands)
+3) Load securely and run checks:
+```java
+String key = BuildConfig.CONFIG_HMAC_KEY; // or from secure source
+SecurityConfig config = SecurityConfigLoader.fromAssetPreferSigned(
+    this, "security_config.json", "security_config.sig",
+    (key != null && !key.isEmpty()) ? key : null
+);
+SecurityModule module = new SecurityModule.Builder(getApplicationContext())
+    .setConfig(config)
+    .build();
+SecurityReport report = module.runAllChecksBlocking();
+if (report.getOverallSeverity() != Severity.OK) {
+  ReportActivity.start(this, report, config);
+  finish();
+}
+```
+
+### Populating integrity fields
+- Signature SHA-256: extract with keytool/apksigner (see earlier)
+- DEX/so checksums: use provided Python snippets; paste into `appIntegrity.expectedDexChecksums` and `expectedSoChecksums`.
+- If no .so in APK, keep `expectedSoChecksums` as `{}`.

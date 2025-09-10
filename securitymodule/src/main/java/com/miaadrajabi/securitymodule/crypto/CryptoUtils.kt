@@ -41,6 +41,19 @@ object CryptoUtils {
         return result == 0
     }
 
+    @JvmStatic fun constantTimeEquals(a: String, b: String): Boolean {
+        return constantTimeEquals(a.toByteArray(), b.toByteArray())
+    }
+
+    // HMAC
+    @JvmStatic fun hmacSha256(data: ByteArray, key: ByteArray): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        val secretKeySpec = javax.crypto.spec.SecretKeySpec(key, "HmacSHA256")
+        mac.init(secretKeySpec)
+        val result = mac.doFinal(data)
+        return result.joinToString("") { "%02x".format(it) }
+    }
+
     // AES-GCM
     @JvmStatic fun generateAesKeyGcm(): SecretKey {
         val kg = KeyGenerator.getInstance("AES")

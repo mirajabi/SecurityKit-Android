@@ -66,6 +66,7 @@ class ScreenCaptureMonitor(private val context: Context) {
                 else -> File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES), "Screenshots")
             }
             if (pics.exists()) {
+                @Suppress("DEPRECATION")
                 fileObserverImages = object : FileObserver(pics.absolutePath, CREATE) {
                     override fun onEvent(event: Int, path: String?) {
                         if (event == CREATE) onEvent(CaptureEventType.SCREENSHOT, null)
@@ -81,6 +82,7 @@ class ScreenCaptureMonitor(private val context: Context) {
                 else -> File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MOVIES), "Screen recordings")
             }
             if (movies.exists()) {
+                @Suppress("DEPRECATION")
                 fileObserverVideos = object : FileObserver(movies.absolutePath, CREATE) {
                     override fun onEvent(event: Int, path: String?) {
                         if (event == CREATE) onEvent(CaptureEventType.SCREEN_RECORDING, null)

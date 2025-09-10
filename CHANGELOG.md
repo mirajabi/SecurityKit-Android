@@ -1,3 +1,23 @@
+## 1.1.0 - 2025-09-10
+
+### Added
+- Signed configuration support (HMAC-SHA256 over RAW JSON) with simple loader:
+  - `SecurityConfigLoader.fromAssetPreferSigned(context, "security_config.json", "security_config.sig", hmacKey)`
+  - `ConfigIntegrity.verifyHmacSignatureRaw`, `loadSignedConfigFromAssetRaw`
+- Cross-platform signing scripts:
+  - `scripts/sign_config_hmac.py` (Python)
+  - `scripts/sign-config-hmac.sh` (Bash wrapper)
+- Device override fields: `allowedManufacturers`, `allowedProducts`, `allowedDevices`, `allowedBoards`
+- Sample wired to prefer signed config via `BuildConfig.CONFIG_HMAC_KEY`
+
+### Improved
+- README with step-by-step Kotlin and Java integration, and usage guide `USAGE_GUIDE.md`
+- Advanced deprecation handling and API-level fallbacks
+
+### Fixed
+- BuildConfig flag configuration (`buildFeatures.buildConfig true`)
+- Minor compilation issues and sample app flow
+
 # Changelog
 
 All notable changes to this project will be documented here.

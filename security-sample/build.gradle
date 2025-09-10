@@ -4,6 +4,9 @@ plugins {
 }
 
 android {
+    buildFeatures {
+        buildConfig true
+    }
     namespace 'com.miaadrajabi.securitysample'
     compileSdk 34
 
@@ -13,6 +16,9 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+        // Optional: provide HMAC key at build-time (for demo only). For prod, fetch at runtime.
+        def hmacKey = System.getenv('CONFIG_HMAC_KEY') ?: (project.hasProperty('CONFIG_HMAC_KEY') ? project.getProperty('CONFIG_HMAC_KEY') : '')
+        buildConfigField 'String', 'CONFIG_HMAC_KEY', '"' + hmacKey + '"'
     }
 
     buildTypes {

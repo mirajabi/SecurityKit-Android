@@ -15,7 +15,9 @@ object SignatureVerifier {
                 val sigs = info.signingInfo.apkContentsSigners
                 sigs.map { bytesToHex(CryptoUtils.sha256(it.toByteArray())) }
             } else {
+                @Suppress("DEPRECATION")
                 val info = pm.getPackageInfo(pkgName, PackageManager.GET_SIGNATURES)
+                @Suppress("DEPRECATION")
                 info.signatures.map { bytesToHex(CryptoUtils.sha256(it.toByteArray())) }
             }
         } catch (t: Throwable) {

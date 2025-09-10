@@ -7,25 +7,97 @@
     "vpnDetection": true,
     "mitmDetection": true,
     "screenCaptureProtection": true,
-    "appSignatureVerification": false,
-    "repackagingDetection": false
+    "appSignatureVerification": true,
+    "repackagingDetection": true,
+    "playIntegrityCheck": false,
+    "advancedAppIntegrity": true,
+    "strongBoxKeys": true,
+    "userAuthBoundKeys": false,
+    "deviceBinding": true,
+    "configIntegrity": false,
+    "tamperEvidence": true
   },
   "thresholds": {
     "emulatorSignalsToBlock": 2,
-    "rootSignalsToBlock": 2
+    "rootSignalsToBlock": 2,
+    "playIntegritySignalsToBlock": 1,
+    "appIntegritySignalsToBlock": 1
+  },
+  "overrides": {
+    "allowedModels": [
+    ],
+    "deniedModels": [],
+    "allowedBrands": [],
+    "deniedBrands": [],
+    "allowedManufacturers": [],
+    "allowedProducts": []
   },
   "policy": {
     "onRoot": "BLOCK",
     "onEmulator": "BLOCK",
-    "onDebugger": "WARN",
-    "onUsbDebug": "WARN",
-    "onVpn": "WARN",
-    "onMitm": "BLOCK"
+    "onDebugger": "BLOCK",
+    "onUsbDebug": "BLOCK",
+    "onVpn": "BLOCK",
+    "onMitm": "BLOCK",
+    "onPlayIntegrityFailure": "WARN",
+    "onAppIntegrityFailure": "BLOCK",
+    "onConfigTampering": "BLOCK",
+    "onStrongBoxUnavailable": "WARN"
   },
   "appIntegrity": {
     "expectedPackageName": "com.miaadrajabi.securitysample",
-    "expectedSignatureSha256": []
-  }
+    "expectedSignatureSha256": [
+      "e22d446c2777ce3d7872539366eab82de0053af8aae620680b25b4addd331f1b"
+    ],
+    "allowedInstallers": [
+      "com.android.vending",
+      "com.huawei.appmarket",
+      "com.samsung.android.galaxyapps",
+      "com.amazon.venezia",
+      "com.sec.android.app.samsungapps"
+    ],
+    "expectedDexChecksums": {
+      "main": "92c8180b0f929f3347f2347c4a4f42ce9c940f6995c0589b7d8c24d8755ec3f9",
+      "2": "cd246c17c0b62a22468e46f59c2a81962d861539f5ea3b230e98a501b79171ca",
+      "3": "78fd40a2427fb5679dea207f19bde5cec4f8895e57f04bbf60867ba5a4ec736c",
+      "4": "734b3de244256af8e2ee8e3610db20e1a147b051e9ba2e6be31728395eb97835"
+    },
+    "expectedSoChecksums": {
+      "arm64-v8a": "... sha256 of native libs ...",
+      "armeabi-v7a": "... sha256 of native libs ..."
+    }
+  },
+  "advanced": {
+    "playIntegrity": {
+      "enabled": false,
+      "nonce": "security_sample_nonce_2024",
+      "fallbackOnUnavailable": true,
+      "timeoutSeconds": 30
+    },
+    "keystore": {
+      "preferStrongBox": true,
+      "userAuthRequired": false,
+      "userAuthValiditySeconds": 300,
+      "deviceBindingEnabled": true
+    },
+    "configIntegrity": {
+      "enabled": false,
+      "verificationMethod": "HMAC",
+      "hmacKey": null,
+      "publicKeyPem": null,
+      "networkConfig": {
+        "configUrl": "https://your-server.com/security-config.json",
+        "signatureUrl": "https://your-server.com/security-config.sig",
+        "timeoutSeconds": 30,
+        "cacheMaxAgeSeconds": 3600
+      }
+    },
+    "tamperEvidence": {
+      "enabled": true,
+      "maxCacheAgeSeconds": 86400,
+      "autoRotateKeys": false,
+      "keyRotationIntervalSeconds": 604800
+    }
+  },
+  "telemetry": { "enabled": true }
 }
-
-

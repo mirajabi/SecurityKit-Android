@@ -3,6 +3,7 @@ package com.miaadrajabi.securitysample
 import android.app.Activity
 import android.os.Bundle
 import com.miaadrajabi.securitymodule.SecurityModule
+import com.miaadrajabi.securitymodule.Severity
 import com.miaadrajabi.securitymodule.config.SecurityConfig
 import com.miaadrajabi.securitymodule.config.SecurityConfigLoader
 import com.miaadrajabi.securitymodule.detectors.ScreenCaptureProtector
@@ -16,7 +17,16 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val config: SecurityConfig = SecurityConfigLoader.fromAsset(this)
+
+//        SecurityUsageExample.completeUsageExample(this);
+
+        val hmacKey = BuildConfig.CONFIG_HMAC_KEY
+        val config: SecurityConfig = SecurityConfigLoader.fromAssetPreferSigned(
+            this,
+            "security_config.json",
+            "security_config.sig",
+            if (hmacKey.isEmpty()) null else hmacKey
+        )
         val module = SecurityModule.Builder(applicationContext)
             .setConfig(config)
             .setTelemetry(telemetry)
@@ -35,9 +45,41 @@ class MainActivity : Activity() {
 
         val report = module.runAllChecksBlocking()
 
-        val root = renderDetailedReport(report, config)
-        renderCryptoDemo(root)
-        setContentView(root)
+        // Handle security check results based on severity
+        when (report.overallSeverity) {
+            Severity.OK -> {
+                // All security checks passed - show normal UI
+                val root = renderDetailedReport(report, config)
+                renderCryptoDemo(root)
+                setContentView(root)
+            }
+            Severity.WARN -> {
+                // Security warnings detected - show warnings but allow continuation
+                println("⚠️ Security warnings detected:")
+                report.findings.forEach { finding ->
+                    println("  - ${finding.title}: ${finding.severity}")
+                }
+                // Show normal UI with warnings
+                val root = renderDetailedReport(report, config)
+                renderCryptoDemo(root)
+                setContentView(root)
+            }
+            Severity.BLOCK -> {
+                // Critical security issues - redirect to warning page and exit
+                println("🚫 Critical security issues detected:")
+                report.findings.forEach { finding ->
+                    println("  - ${finding.title}: ${finding.severity}")
+                }
+                ReportActivity.start(this, report, config)
+                finish()
+            }
+            Severity.INFO -> {
+                // Info level - show normal UI
+                val root = renderDetailedReport(report, config)
+                renderCryptoDemo(root)
+                setContentView(root)
+            }
+        }
     }
 }
 
