@@ -23,7 +23,6 @@
 All notable changes to this project will be documented here.
 
 ## [1.0.1] - 2025-09-08
-- English-only clean up (removed Persian comments/strings)
 - Expanded emulator detection (more props/files/proc/sensors network heuristics)
 - Java interop: added @JvmStatic for easier usage from Java
 
