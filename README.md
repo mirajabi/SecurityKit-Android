@@ -1,4 +1,4 @@
-# SecurityModule (v1.1.0)
+# SecurityModule (v1.2.0)
 
 Production-grade Android security toolkit for banking/fintech/POS apps.
 
@@ -36,6 +36,16 @@ For details on each capability and how to use it, see the docs below:
 - [Troubleshooting](docs/troubleshooting.md)
 - [Best Practices](docs/best-practices.md)
 
+New in v1.2.0:
+- [APK HMAC Protection](docs/apk-hmac-protection.md)
+- [APK HMAC - Step-by-step Guide](docs/apk-hmac-step-by-step-guide.md)
+- [APK HMAC - Quick Start](docs/apk-hmac-quick-start.md)
+- [APK HMAC - Practical Example](docs/apk-hmac-practical-example.md)
+- [Emulator vs Real Device](docs/emulator-vs-real-device.md)
+- [Fallback Strategy](docs/fallback-strategy.md)
+- [Secure HMAC](docs/secure-hmac.md)
+- [Main Activity Test Hub UI](docs/main-activity-ui.md)
+
 ### Quick JitPack usage
 
 1) Add JitPack repository
@@ -69,14 +79,14 @@ dependencyResolutionManagement {
 Groovy — build.gradle (Module):
 ```groovy
 dependencies {
-    implementation 'com.github.mirajabi:SecurityKit-Android:1.1.0'
+    implementation 'com.github.mirajabi:SecurityKit-Android:1.2.0'
 }
 ```
 
 Kotlin DSL — build.gradle.kts (Module):
 ```kotlin
 dependencies {
-    implementation("com.github.mirajabi:SecurityKit-Android:1.1.0")
+    implementation("com.github.mirajabi:SecurityKit-Android:1.2.0")
 }
 ```
 
