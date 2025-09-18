@@ -1,24 +1,24 @@
-# 📚 مستندات APK HMAC Protection System
+# 📚 APK HMAC Protection System Documentation
 
-## 🎯 معرفی
+## 🎯 Overview
 
-**APK HMAC Protection System** یک سیستم امنیتی پیشرفته برای محافظت از اپلیکیشن‌های Android در برابر **repackaging** و **tampering** است.
+The **APK HMAC Protection System** is an advanced security system to protect Android apps against **repackaging** and **tampering**.
 
-## 📖 فهرست مستندات
+## 📖 Documentation Index
 
-### 🚀 شروع سریع
-- **[راهنمای سریع](apk-hmac-quick-start.md)** - شروع در 5 دقیقه
-- **[راهنمای مرحله‌به‌مرحله](apk-hmac-step-by-step-guide.md)** - راهنمای کامل
+### 🚀 Quick Start
+- **[Quick Start](apk-hmac-quick-start.md)** — Get started in 5 minutes
+- **[Step-by-step Guide](apk-hmac-step-by-step-guide.md)** — Full guide
 
-### 📱 مثال‌های عملی
-- **[مثال عملی اپلیکیشن بانکداری](apk-hmac-practical-example.md)** - پیاده‌سازی کامل
-- **[مستندات فنی](apk-hmac-protection.md)** - جزئیات فنی
+### 📱 Practical Examples
+- **[APK HMAC — Practical Example](apk-hmac-practical-example.md)** — Complete implementation
+- **[APK HMAC — Technical Documentation](apk-hmac-protection.md)** — Technical details
 
-### 🔧 ابزارها و اسکریپت‌ها
-- **[اسکریپت Python](generate_apk_hmac.py)** - تولید HMAC signature
-- **[اسکریپت Shell](sign_apk_with_hmac.sh)** - خودکارسازی فرآیند
+### 🔧 Tools & Scripts
+- **[Python Script](generate_apk_hmac.py)** — Generate HMAC signature
+- **[Shell Script](sign_apk_with_hmac.sh)** — Automate signing process
 
-## 🏗️ معماری سیستم
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -32,71 +32,70 @@
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🔐 سطوح امنیتی
+## 🔐 Security Levels
 
-### 🛡️ StrongBox (حداکثر امنیت)
+### 🛡️ StrongBox (Maximum Security)
 - Hardware Security Module (HSM)
-- کلید هرگز از سخت‌افزار امن خارج نمی‌شود
-- بالاترین محافظت در برابر حملات
+- Keys never leave secure hardware
+- Highest protection against attacks
 
-### 🔒 TEE (امنیت بالا)
+### 🔒 TEE (High Security)
 - Trusted Execution Environment
-- امنیت پشتیبانی شده توسط سخت‌افزار
-- محافظت خوب در برابر حملات نرم‌افزاری
+- Hardware-backed security
+- Strong protection against software attacks
 
-### 💻 Software (امنیت متوسط)
-- پیاده‌سازی نرم‌افزاری استاندارد
-- محافظت پایه در برابر دستکاری
+### 💻 Software (Medium Security)
+- Standard software implementation
+- Baseline protection against tampering
 
-## 🚀 شروع سریع
+## 🚀 Quick Usage
 
-### 1. کپی اسکریپت‌ها
+### 1. Copy scripts
 ```bash
 cp -r /path/to/PosSecurity/scripts/ ./scripts/
 chmod +x scripts/*.sh scripts/*.py
 ```
 
-### 2. اضافه کردن dependency
+### 2. Add dependency
 ```gradle
 dependencies {
     implementation project(':securitymodule')
 }
 ```
 
-### 3. Build و Sign
+### 3. Build & Sign
 ```bash
 ./gradlew assembleRelease
 ./scripts/sign_apk_with_hmac.sh app/build/outputs/apk/release/app-release.apk
 ```
 
-### 4. اضافه کردن کد تأیید
+### 4. Add verification code
 ```kotlin
 lifecycleScope.launch {
-    val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
-    if (!integrityInfo.isIntegrityValid) {
-        // اقدام امنیتی
-        finish()
+    val info = ApkHmacProtector.verifyApkIntegrity(context)
+    if (!info.isIntegrityValid) {
+        finish() // take security action
     }
 }
 ```
 
-## 📋 ویژگی‌ها
+## 📋 Features
 
-- ✅ **تأیید اصالت APK** - بررسی تغییرات در فایل APK
-- ✅ **تشخیص Repackaging** - شناسایی نصب از منابع غیرمجاز
-- ✅ **امنیت سخت‌افزاری** - استفاده از StrongBox/TEE
-- ✅ **یکپارچه‌سازی Build** - خودکارسازی در فرآیند build
-- ✅ **بررسی دوره‌ای** - نظارت مداوم بر امنیت
-- ✅ **مدیریت خطا** - پردازش graceful خطاها
+- ✅ **APK Authenticity** — Detect APK modifications
+- ✅ **Repackaging Detection** — Identify untrusted installers
+- ✅ **Hardware-backed Security** — StrongBox/TEE support
+- ✅ **Build Integration** — Automated in build pipeline
+- ✅ **Periodic Checks** — Continuous monitoring
+- ✅ **Robust Error Handling** — Graceful degradation
 
-## 🔧 ابزارها
+## 🔧 Tools
 
-### اسکریپت Python
+### Python Script
 ```bash
 python3 scripts/generate_apk_hmac.py app-release.apk
 ```
 
-### اسکریپت Shell
+### Shell Script
 ```bash
 ./scripts/sign_apk_with_hmac.sh app-release.apk -a src/main/assets/
 ```
@@ -115,80 +114,80 @@ buildTypes {
 }
 ```
 
-## 📊 عملکرد
+## 📊 Performance
 
-| معیار | تأثیر |
+| Metric | Impact |
 |-------|-------|
-| زمان Startup | +50-100ms |
-| مصرف حافظه | +1-2MB |
-| تأثیر باتری | حداقل |
-| استفاده شبکه | هیچ |
+| Startup time | +50–100ms |
+| Memory usage | +1–2MB |
+| Battery impact | Minimal |
+| Network usage | None |
 
-## 🔍 تست
+## 🔍 Testing
 
-### تست عادی
+### Normal Test
 ```bash
 adb install app-release.apk
 adb shell am start -n com.yourpackage/.MainActivity
 ```
 
-### تست Repackaging
+### Repackaging Test
 ```bash
-# تغییر APK
 apktool d app-release.apk
-# تغییر فایل‌ها
 apktool b app-release -o modified.apk
-# نصب و تست
 adb install modified.apk
 ```
 
-## 🛠️ عیب‌یابی
+## 🛠️ Troubleshooting
 
-### مشکل رایج 1: اسکریپت اجرا نمی‌شود
+### Common issue 1: Script does not run
 ```bash
 chmod +x scripts/sign_apk_with_hmac.sh
 ```
 
-### مشکل رایج 2: Signature پیدا نمی‌شود
+### Common issue 2: Signature not found
 ```bash
 ls -la app/src/main/assets/apk_hmac_signature.txt
 ```
 
-### مشکل رایج 3: اپلیکیشن crash می‌کند
+### Common issue 3: App crashes
 ```kotlin
 try {
-    val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
+    val info = ApkHmacProtector.verifyApkIntegrity(context)
 } catch (e: Exception) {
     Log.e("APK", "Error", e)
 }
 ```
 
-## 📚 منابع بیشتر
+## 📚 More Resources
 
-- **[راهنمای کامل](apk-hmac-step-by-step-guide.md)** - جزئیات کامل
-- **[مثال عملی](apk-hmac-practical-example.md)** - پیاده‌سازی واقعی
-- **[مستندات فنی](apk-hmac-protection.md)** - جزئیات فنی
+- **[Step-by-step Guide](apk-hmac-step-by-step-guide.md)** — Full details
+- **[Practical Example](apk-hmac-practical-example.md)** — Real implementation
+- **[Technical Documentation](apk-hmac-protection.md)** — API and internals
+- **[Emulator vs Real Device](emulator-vs-real-device.md)**
+- **[Fallback Strategy](fallback-strategy.md)**
+- **[Secure HMAC](secure-hmac.md)**
+- **[Main Activity Test Hub UI](main-activity-ui.md)**
 
-## 🤝 مشارکت
+## 🤝 Contributing
 
-برای مشارکت در توسعه:
-1. Fork کنید
-2. Branch جدید بسازید
-3. تغییرات را commit کنید
-4. Pull request ارسال کنید
+1. Fork the repo
+2. Create a new branch
+3. Commit your changes
+4. Open a Pull Request
 
-## 📄 مجوز
+## 📄 License
 
-این پروژه تحت مجوز MIT منتشر شده است.
+This project is released under the MIT License.
 
-## 🆘 پشتیبانی
+## 🆘 Support
 
-در صورت بروز مشکل:
-1. مستندات را مطالعه کنید
-2. مثال‌ها را بررسی کنید
-3. Issues را جستجو کنید
-4. Issue جدید ایجاد کنید
+If you face issues:
+1. Read the docs
+2. Review the examples
+3. Search existing issues
+4. Open a new issue
 
 ---
 
-**🎉 APK شما حالا با HMAC محافظت شده و در برابر repackaging امن است!**
+**🎉 Your APK is now protected by HMAC and hardened against repackaging!**

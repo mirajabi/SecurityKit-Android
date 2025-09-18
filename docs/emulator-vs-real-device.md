@@ -1,58 +1,58 @@
 # Android Keystore: Emulator vs Real Device
 
-## 📱 پاسخ به سوالات مهم
+## 📱 Key questions
 
-### ❓ آیا می‌توان Secure HMAC را روی Emulator تست کرد؟
+### ❓ Can we test Secure HMAC on an emulator?
 
-**✅ بله، اما با محدودیت‌ها:**
+**✅ Yes, with limitations:**
 
-#### **🟢 آنچه روی Emulator کار می‌کند:**
-- ✅ Android Keystore API (نرم‌افزاری)
-- ✅ کلیدهای AES معمولی
-- ✅ HMAC computation و verification
-- ✅ Configuration loading با secure HMAC
+#### **🟢 What works on emulators:**
+- ✅ Android Keystore API (software-backed)
+- ✅ Standard AES keys
+- ✅ HMAC computation and verification
+- ✅ Configuration loading with secure HMAC
 - ✅ Basic security tests
 
-#### **🔴 آنچه روی Emulator محدود است:**
-- ❌ TEE (Trusted Execution Environment) - سخت‌افزاری
-- ❌ StrongBox - سخت‌افزاری
+#### **🔴 What is limited on emulators:**
+- ❌ TEE (Trusted Execution Environment) — hardware
+- ❌ StrongBox — hardware
 - ❌ Hardware-backed keys
-- ❌ Device binding واقعی
+- ❌ Real device binding
 - ❌ User authentication binding
 
-### ❓ آیا ممکن است بعضی دستگاه‌ها این قابلیت‌ها را نداشته باشند؟
+### ❓ Do some real devices lack these capabilities?
 
-**⚠️ بله، کاملاً ممکن است:**
+**⚠️ Yes, absolutely:**
 
-#### **📊 آمار سازگاری:**
+#### **📊 Compatibility summary:**
 
-| ویژگی | API Level | پشتیبانی | توضیحات |
-|--------|-----------|----------|---------|
-| **Android Keystore** | 18+ | 99% | تقریباً همه دستگاه‌ها |
-| **TEE Support** | 23+ | 85% | اکثر دستگاه‌های جدید |
-| **StrongBox** | 28+ | 15% | فقط دستگاه‌های پرچم‌دار |
-| **User Auth Binding** | 23+ | 90% | اگر biometric موجود باشد |
-| **Device Binding** | 23+ | 80% | بستگی به manufacturer |
+| Feature | API Level | Coverage | Notes |
+|--------|-----------|----------|-------|
+| **Android Keystore** | 18+ | 99% | Almost all devices |
+| **TEE Support** | 23+ | 85% | Most modern devices |
+| **StrongBox** | 28+ | 15% | Mostly flagships |
+| **User Auth Binding** | 23+ | 90% | If biometric available |
+| **Device Binding** | 23+ | 80% | Manufacturer dependent |
 
-#### **🔍 دستگاه‌هایی که ممکن است مشکل داشته باشند:**
+#### **🔍 Devices likely to have issues:**
 
-1. **دستگاه‌های قدیمی (API < 23):**
-   - Android 5.1 و پایین‌تر
-   - Fallback به software keys
+1. **Legacy devices (API < 23):**
+   - Android 5.1 and earlier
+   - Fallback to software keys
 
-2. **دستگاه‌های ارزان قیمت:**
-   - ممکن است TEE نداشته باشند
-   - Keystore نرم‌افزاری
+2. **Low-cost devices:**
+   - May lack TEE
+   - Software keystore only
 
-3. **دستگاه‌های Root شده:**
-   - ممکن است Keystore آسیب دیده باشد
-   - نیاز به fallback mechanisms
+3. **Rooted devices:**
+   - Keystore may be compromised
+   - Requires robust fallbacks
 
-4. **دستگاه‌های Custom ROM:**
-   - ممکن است Keystore implementation متفاوت باشد
-   - نیاز به testing بیشتر
+4. **Custom ROMs:**
+   - Keystore implementations may vary
+   - Requires extra testing
 
-## 🛡️ راه‌حل‌های پیاده‌سازی شده
+## 🛡️ Implemented solutions
 
 ### **1. Fallback Strategy:**
 ```kotlin
@@ -80,28 +80,15 @@ fun getOrCreateSecureHmacKey(): SecretKey {
 @JvmStatic
 fun getKeystoreCapabilities(): Map<String, Any> {
     val capabilities = mutableMapOf<String, Any>()
-    
-    // Check Android version
     capabilities["android_version"] = Build.VERSION.SDK_INT
-    
-    // Check if running on emulator
     capabilities["is_emulator"] = isRunningOnEmulator()
-    
-    // Check Keystore availability
     capabilities["keystore_available"] = try {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE)
         ks.load(null)
         true
-    } catch (e: Exception) {
-        false
-    }
-    
-    // Check TEE support
+    } catch (_: Exception) { false }
     capabilities["tee_support"] = testTeeSupport()
-    
-    // Check StrongBox support
     capabilities["strongbox_support"] = isStrongBoxAvailableForHmac()
-    
     return capabilities
 }
 ```
@@ -110,139 +97,89 @@ fun getKeystoreCapabilities(): Map<String, Any> {
 ```kotlin
 private fun isRunningOnEmulator(): Boolean {
     return try {
-        val buildModel = Build.MODEL.lowercase()
-        val buildManufacturer = Build.MANUFACTURER.lowercase()
-        val buildProduct = Build.PRODUCT.lowercase()
-        val buildDevice = Build.DEVICE.lowercase()
-        
-        buildModel.contains("google_sdk") ||
-        buildModel.contains("emulator") ||
-        buildModel.contains("android sdk") ||
-        buildManufacturer.contains("genymotion") ||
-        buildProduct.contains("sdk") ||
-        buildProduct.contains("emulator") ||
-        buildDevice.contains("generic") ||
+        val model = Build.MODEL.lowercase()
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val product = Build.PRODUCT.lowercase()
+        val device = Build.DEVICE.lowercase()
+        model.contains("google_sdk") ||
+        model.contains("emulator") ||
+        model.contains("android sdk") ||
+        manufacturer.contains("genymotion") ||
+        product.contains("sdk") ||
+        product.contains("emulator") ||
+        device.contains("generic") ||
         Build.FINGERPRINT.startsWith("generic") ||
         Build.FINGERPRINT.startsWith("unknown") ||
         Build.HARDWARE.contains("goldfish") ||
         Build.HARDWARE.contains("ranchu")
-    } catch (e: Exception) {
-        false
-    }
+    } catch (_: Exception) { false }
 }
 ```
 
-## 📋 تست‌های پیشنهادی
+## 📋 Recommended tests
 
-### **1. تست روی Emulator:**
-```bash
-# برای development و basic testing
+### **1. Emulator testing:**
 - Android Studio Emulator
 - Genymotion
-- BlueStacks (برای testing)
-```
+- BlueStacks (testing only)
 
-### **2. تست روی Real Device:**
-```bash
-# برای production testing
-- دستگاه‌های مختلف (Samsung, Huawei, Xiaomi, etc.)
-- Android versions مختلف (7, 8, 9, 10, 11, 12, 13, 14)
-- دستگاه‌های ارزان و گران
-```
+### **2. Real device testing:**
+- Multiple OEMs (Samsung, Huawei, Xiaomi, etc.)
+- Various Android versions (7–14)
+- Low-end and high-end devices
 
-### **3. تست Compatibility:**
+### **3. Compatibility test:**
 ```kotlin
-// در MainActivity
 private fun runCompatibilityTest() {
     val capabilities = SecureHmacHelper.getKeystoreCapabilities()
-    
     when {
-        capabilities["strongbox_support"] == true -> {
-            log("🟢 Full security features available")
-        }
-        capabilities["tee_support"] == true -> {
-            log("🟡 TEE available, StrongBox not supported")
-        }
-        capabilities["keystore_available"] == true -> {
-            log("🟡 Software Keystore available")
-        }
-        else -> {
-            log("🔴 Fallback to software keys")
-        }
+        capabilities["strongbox_support"] == true -> log("🟢 Full security features available")
+        capabilities["tee_support"] == true -> log("🟡 TEE available, StrongBox not supported")
+        capabilities["keystore_available"] == true -> log("🟡 Software Keystore available")
+        else -> log("🔴 Fallback to software keys")
     }
 }
 ```
 
-## 🎯 توصیه‌های عملی
+## 🎯 Practical recommendations
 
-### **برای Development:**
-1. ✅ از Emulator برای basic testing استفاده کنید
-2. ✅ Capability detection را implement کنید
-3. ✅ Fallback mechanisms را تست کنید
+### **For development:**
+1. ✅ Use emulators for basic testing
+2. ✅ Implement capability detection
+3. ✅ Test fallback mechanisms
 
-### **برای Production:**
-1. ✅ حتماً روی real devices تست کنید
-2. ✅ دستگاه‌های مختلف را test کنید
-3. ✅ Error handling جامع پیاده‌سازی کنید
-4. ✅ Logging برای debugging اضافه کنید
+### **For production:**
+1. ✅ Always test on real devices
+2. ✅ Test across multiple OEMs and Android versions
+3. ✅ Implement robust error handling and logging
 
-### **برای Maximum Compatibility:**
-1. ✅ همیشه fallback به software keys داشته باشید
-2. ✅ Capability detection قبل از استفاده
-3. ✅ Graceful degradation
-4. ✅ User feedback مناسب
+### **For maximum compatibility:**
+1. ✅ Always have software key fallback
+2. ✅ Implement graceful degradation
+3. ✅ Provide good user feedback
 
-## 🔧 کد نمونه برای Production:
-
+## 🔧 Production sample code:
 ```kotlin
 class SecureHmacManager(private val context: Context) {
-    
     fun getBestAvailableKey(): SecretKey {
         val capabilities = SecureHmacHelper.getKeystoreCapabilities()
-        
         return when {
-            capabilities["strongbox_support"] == true -> {
-                log("Using StrongBox-backed key")
-                SecureHmacHelper.getOrCreateStrongBoxHmacKey()
-            }
-            capabilities["tee_support"] == true -> {
-                log("Using TEE-backed key")
-                SecureHmacHelper.getOrCreateSecureHmacKey()
-            }
-            capabilities["keystore_available"] == true -> {
-                log("Using software Keystore key")
-                SecureHmacHelper.getOrCreateSecureHmacKey()
-            }
-            else -> {
-                log("Using software-generated key")
-                SecureHmacHelper.generateSoftwareHmacKey()
-            }
+            capabilities["strongbox_support"] == true -> SecureHmacHelper.getOrCreateStrongBoxHmacKey()
+            capabilities["tee_support"] == true -> SecureHmacHelper.getOrCreateSecureHmacKey()
+            capabilities["keystore_available"] == true -> SecureHmacHelper.getOrCreateSecureHmacKey()
+            else -> SecureHmacHelper.generateSoftwareHmacKey()
         }
     }
-    
-    fun computeSecureHmac(data: ByteArray): String {
-        return try {
-            val key = getBestAvailableKey()
-            SecureHmacHelper.computeHmacSha256(data, key)
-        } catch (e: Exception) {
-            log("HMAC computation failed: ${e.message}")
-            // Fallback to basic HMAC
-            computeBasicHmac(data)
-        }
-    }
+    fun computeSecureHmac(data: ByteArray): String =
+        try { SecureHmacHelper.computeHmacSha256(data, getBestAvailableKey()) }
+        catch (e: Exception) { computeBasicHmac(data) }
 }
 ```
 
-## 📊 خلاصه:
+## 📊 Summary:
 
-| محیط | Keystore | TEE | StrongBox | توصیه |
-|------|----------|-----|-----------|--------|
-| **Emulator** | ✅ نرم‌افزاری | ❌ | ❌ | Development |
-| **Real Device** | ✅ سخت‌افزاری | ✅ | ⚠️ | Production |
-| **Old Device** | ✅ نرم‌افزاری | ❌ | ❌ | Fallback |
-
-**🎯 نتیجه‌گیری:** 
-- Emulator برای development مناسب است
-- Real device برای production ضروری است
-- همیشه fallback mechanisms داشته باشید
-- Capability detection قبل از استفاده انجام دهید
+**🎯 Takeaways:** 
+- Emulators are fine for development
+- Real devices are mandatory for production
+- Always implement fallback mechanisms
+- Perform capability detection before use

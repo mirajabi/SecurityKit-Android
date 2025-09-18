@@ -1,85 +1,85 @@
-# APK HMAC Protection - راهنمای سریع
+# APK HMAC Protection - Quick Start
 
-## 🚀 شروع سریع (5 دقیقه)
+## 🚀 Get Started (5 minutes)
 
-### مرحله 1: کپی اسکریپت‌ها
+### Step 1: Copy scripts
 ```bash
 cp -r /path/to/PosSecurity/scripts/ ./scripts/
 chmod +x scripts/*.sh scripts/*.py
 ```
 
-### مرحله 2: اضافه کردن dependency
+### Step 2: Add dependency
 ```gradle
-// در app/build.gradle
+// app/build.gradle
 dependencies {
     implementation project(':securitymodule')
 }
 ```
 
-### مرحله 3: Build APK
+### Step 3: Build APK
 ```bash
 ./gradlew assembleRelease
 ```
 
-### مرحله 4: تولید HMAC Signature
+### Step 4: Generate HMAC signature
 ```bash
 ./scripts/sign_apk_with_hmac.sh app/build/outputs/apk/release/app-release.apk
 ```
 
-### مرحله 5: اضافه کردن کد تأیید
+### Step 5: Add verification code
 ```kotlin
-// در MainActivity.onCreate()
+// In MainActivity.onCreate()
 lifecycleScope.launch {
-    val integrityInfo = ApkHmacProtector.verifyApkIntegrity(this@MainActivity)
-    if (!integrityInfo.isIntegrityValid) {
-        // اقدام امنیتی
+    val info = ApkHmacProtector.verifyApkIntegrity(this@MainActivity)
+    if (!info.isIntegrityValid) {
+        // Take a security action
         finish()
     }
 }
 ```
 
-## ✅ تست سریع
+## ✅ Quick test
 
 ```bash
-# نصب و تست
+# Install and launch
 adb install app/build/outputs/apk/release/app-release.apk
 adb shell am start -n com.yourpackage/.MainActivity
 ```
 
-## 🔧 عیب‌یابی سریع
+## 🔧 Quick troubleshooting
 
-### مشکل: اسکریپت اجرا نمی‌شود
+### Script does not run
 ```bash
 chmod +x scripts/sign_apk_with_hmac.sh
 ```
 
-### مشکل: Signature پیدا نمی‌شود
+### Signature not found
 ```bash
 ls -la app/src/main/assets/apk_hmac_signature.txt
 ```
 
-### مشکل: اپلیکیشن crash می‌کند
+### App crashes
 ```kotlin
 try {
-    val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
+    val info = ApkHmacProtector.verifyApkIntegrity(context)
 } catch (e: Exception) {
     Log.e("APK", "Error", e)
 }
 ```
 
-## 📋 چک‌لیست
+## 📋 Checklist
 
-- [ ] اسکریپت‌ها کپی شده
-- [ ] dependency اضافه شده
-- [ ] APK build شده
-- [ ] HMAC signature تولید شده
-- [ ] کد تأیید اضافه شده
-- [ ] تست انجام شده
+- [ ] Scripts copied
+- [ ] Dependency added
+- [ ] APK built
+- [ ] HMAC signature generated
+- [ ] Verification code added
+- [ ] Test completed
 
-## 🎯 نتیجه
+## 🎯 Result
 
-APK شما حالا با HMAC محافظت شده و در برابر repackaging امن است!
+Your APK is now protected by HMAC and hardened against repackaging.
 
 ---
 
-**📖 برای جزئیات بیشتر، راهنمای کامل را مطالعه کنید: [apk-hmac-step-by-step-guide.md](apk-hmac-step-by-step-guide.md)**
+For full details, see: [apk-hmac-step-by-step-guide.md](apk-hmac-step-by-step-guide.md)

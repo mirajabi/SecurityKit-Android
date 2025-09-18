@@ -1,110 +1,110 @@
-# راهنمای کامل APK HMAC Protection - مرحله به مرحله
+# APK HMAC Protection - Step-by-step Guide
 
-## 📋 فهرست مطالب
-1. [مقدمه و هدف](#مقدمه-و-هدف)
-2. [مرحله 1: آماده‌سازی پروژه](#مرحله-1-آماده‌سازی-پروژه)
-3. [مرحله 2: نصب و پیکربندی](#مرحله-2-نصب-و-پیکربندی)
-4. [مرحله 3: تولید APK](#مرحله-3-تولید-apk)
-5. [مرحله 4: تولید HMAC Signature](#مرحله-4-تولید-hmac-signature)
-6. [مرحله 5: ادغام در اپلیکیشن](#مرحله-5-ادغام-در-اپلیکیشن)
-7. [مرحله 6: تست و تأیید](#مرحله-6-تست-و-تأیید)
-8. [مرحله 7: استقرار در تولید](#مرحله-7-استقرار-در-تولید)
-9. [عیب‌یابی و مشکلات رایج](#عیب‌یابی-و-مشکلات-رایج)
-10. [بهترین روش‌ها](#بهترین-روش‌ها)
-
----
-
-## مقدمه و هدف
-
-**APK HMAC Protection System** یک سیستم امنیتی پیشرفته است که از اپلیکیشن شما در برابر **repackaging** و **tampering** محافظت می‌کند.
-
-### 🎯 اهداف:
-- جلوگیری از تغییر APK توسط مهاجمان
-- تشخیص نصب از منابع غیرمجاز
-- تأیید اصالت اپلیکیشن در runtime
-- استفاده از سخت‌افزار امنیتی دستگاه
+## 📋 Table of contents
+1. [Introduction and goals](#introduction-and-goals)
+2. [Step 1: Project preparation](#step-1-project-preparation)
+3. [Step 2: Installation and configuration](#step-2-installation-and-configuration)
+4. [Step 3: Build the APK](#step-3-build-the-apk)
+5. [Step 4: Generate HMAC signature](#step-4-generate-hmac-signature)
+6. [Step 5: App integration](#step-5-app-integration)
+7. [Step 6: Test and verification](#step-6-test-and-verification)
+8. [Step 7: Production rollout](#step-7-production-rollout)
+9. [Troubleshooting](#troubleshooting)
+10. [Best practices](#best-practices)
 
 ---
 
-## مرحله 1: آماده‌سازی پروژه
+## Introduction and goals
 
-### 1.1 بررسی پیش‌نیازها
+The **APK HMAC Protection System** protects your APK against **repackaging** and **tampering**.
+
+### 🎯 Goals
+- Prevent unauthorized APK modification
+- Detect unknown or untrusted installer sources
+- Verify app authenticity at runtime
+- Leverage hardware-backed security (StrongBox/TEE) when available
+
+---
+
+## Step 1: Project preparation
+
+### 1.1 Prerequisites
 
 ```bash
-# بررسی نسخه Java
+# Check Java version
 java -version
 # باید Java 8 یا بالاتر باشد
 
-# بررسی نسخه Python
+# Check Python version
 python3 --version
 # باید Python 3.6 یا بالاتر باشد
 
-# بررسی دسترسی به فایل‌ها
+# Ensure scripts directory exists
 ls -la scripts/
 ```
 
-### 1.2 ساختار پروژه
+### 1.2 Project structure
 
 ```
 your-project/
 ├── app/
 │   ├── src/main/
-│   │   ├── assets/          # اینجا signature ذخیره می‌شود
+│   │   ├── assets/          # signature will be stored here
 │   │   ├── java/
 │   │   └── res/
 │   └── build.gradle
-├── scripts/                 # اسکریپت‌های HMAC
-└── docs/                   # مستندات
+├── scripts/                 # HMAC scripts
+└── docs/                    # documentation
 ```
 
-### 1.3 اضافه کردن dependency
+### 1.3 Add dependency
 
-در فایل `app/build.gradle`:
+In `app/build.gradle`:
 
 ```gradle
 dependencies {
     implementation 'com.miaadrajabi.securitymodule:securitymodule:1.0.0'
-    // یا اگر local module است:
+    // or if using local module:
     implementation project(':securitymodule')
 }
 ```
 
 ---
 
-## مرحله 2: نصب و پیکربندی
+## Step 2: Installation and configuration
 
-### 2.1 کپی کردن اسکریپت‌ها
+### 2.1 Copy scripts
 
 ```bash
-# کپی اسکریپت‌ها به پروژه شما
+# Copy scripts into your project
 cp -r /path/to/PosSecurity/scripts/ ./scripts/
 chmod +x scripts/*.sh
 chmod +x scripts/*.py
 ```
 
-### 2.2 تست اسکریپت‌ها
+### 2.2 Test scripts
 
 ```bash
-# تست اسکریپت Python
+# Python script
 python3 scripts/generate_apk_hmac.py --help
 
-# تست اسکریپت Shell
+# Shell script
 ./scripts/sign_apk_with_hmac.sh --help
 ```
 
-### 2.3 پیکربندی Gradle
+### 2.3 Gradle configuration
 
-در فایل `app/build.gradle`:
+In `app/build.gradle`:
 
 ```gradle
 android {
-    // ... سایر تنظیمات
+    // ... other settings
     
     buildTypes {
         release {
-            // ... سایر تنظیمات
+            // ... other settings
             
-            // اضافه کردن task برای تولید HMAC
+            // Add a task to generate HMAC post-build
             doLast {
                 exec {
                     commandLine 'bash', '../scripts/sign_apk_with_hmac.sh', 
@@ -120,70 +120,70 @@ android {
 
 ---
 
-## مرحله 3: تولید APK
+## Step 3: Build the APK
 
-### 3.1 Build کردن پروژه
+### 3.1 Build project
 
 ```bash
-# Clean کردن پروژه
+# Clean
 ./gradlew clean
 
-# Build کردن APK
+# Build APK
 ./gradlew assembleRelease
 
-# یا برای debug
+# Or debug
 ./gradlew assembleDebug
 ```
 
-### 3.2 بررسی APK تولید شده
+### 3.2 Verify built APK
 
 ```bash
-# بررسی وجود APK
+# Ensure APK exists
 ls -la app/build/outputs/apk/release/
 
-# بررسی اندازه APK
+# Check APK size
 du -h app/build/outputs/apk/release/app-release.apk
 ```
 
-### 3.3 مسیر APK
+### 3.3 APK path
 
-APK شما در این مسیر قرار دارد:
+Your APK will be at:
 ```
 app/build/outputs/apk/release/app-release.apk
 ```
 
 ---
 
-## مرحله 4: تولید HMAC Signature
+## Step 4: Generate HMAC signature
 
-### 4.1 روش دستی
+### 4.1 Manual
 
 ```bash
-# تولید signature با اسکریپت Shell
+# Generate with shell script
 ./scripts/sign_apk_with_hmac.sh app/build/outputs/apk/release/app-release.apk
 
-# یا با Python
+# Or with Python
 python3 scripts/generate_apk_hmac.py app/build/outputs/apk/release/app-release.apk
 ```
 
-### 4.2 روش خودکار (توصیه شده)
+### 4.2 Automated (recommended)
 
 ```bash
-# اجرای build با تولید خودکار signature
+# Build with automated signature generation
 ./gradlew assembleRelease
 ```
 
-### 4.3 بررسی signature تولید شده
+### 4.3 Verify generated signature
 
 ```bash
-# بررسی فایل signature
+# Check signature file
 ls -la app/src/main/assets/apk_hmac_signature.txt
 
-# محتوای signature
+# Inspect signature content
 cat app/src/main/assets/apk_hmac_signature.txt
 ```
 
-### 4.4 خروجی مورد انتظار
+### 4.4 Expected output
 
 ```
 ✅ APK HMAC signing completed successfully!
@@ -194,18 +194,18 @@ cat app/src/main/assets/apk_hmac_signature.txt
 
 ---
 
-## مرحله 5: ادغام در اپلیکیشن
+## Step 5: App integration
 
-### 5.1 اضافه کردن import
+### 5.1 Imports
 
-در فایل `MainActivity.kt` یا کلاس اصلی:
+In `MainActivity.kt` or your entry activity:
 
 ```kotlin
 import com.miaadrajabi.securitymodule.crypto.ApkHmacProtector
 import kotlinx.coroutines.*
 ```
 
-### 5.2 اضافه کردن کد تأیید در onCreate
+### 5.2 Add verification in onCreate
 
 ```kotlin
 class MainActivity : AppCompatActivity() {
@@ -214,37 +214,37 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
-        // تأیید APK integrity در startup
+        // Verify APK integrity at startup
         verifyApkIntegrity()
     }
     
     private fun verifyApkIntegrity() {
         lifecycleScope.launch {
             try {
-                // تأیید integrity
+                // Verify integrity
                 val integrityInfo = ApkHmacProtector.verifyApkIntegrity(this@MainActivity)
                 
                 if (!integrityInfo.isIntegrityValid) {
-                    // APK تغییر کرده - اقدام امنیتی
+                    // APK modified — take a security action
                     handleSecurityBreach()
                     return@launch
                 }
                 
-                // بررسی repackaging
+                // Check repackaging
                 val isRepackaged = ApkHmacProtector.detectRepackaging(this@MainActivity)
                 
                 if (isRepackaged) {
-                    // APK repackaged شده - اقدام امنیتی
+                    // APK repackaged — take a security action
                     handleRepackagingDetected()
                     return@launch
                 }
                 
-                // همه چیز OK
+                // OK
                 Log.d("APK", "APK integrity verified successfully")
                 
             } catch (e: Exception) {
                 Log.e("APK", "APK integrity check failed", e)
-                // در صورت خطا، اقدام امنیتی
+                // On error, take a security action
                 handleSecurityError()
             }
         }
@@ -271,21 +271,21 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### 5.3 اضافه کردن بررسی دوره‌ای
+### 5.3 Periodic checks
 
 ```kotlin
 class MainActivity : AppCompatActivity() {
     
-    private val securityCheckInterval = 30000L // 30 ثانیه
+    private val securityCheckInterval = 30000L // 30 seconds
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
-        // تأیید اولیه
+        // Initial verification
         verifyApkIntegrity()
         
-        // بررسی دوره‌ای
+        // Periodic check
         startPeriodicSecurityCheck()
     }
     
@@ -311,208 +311,208 @@ class MainActivity : AppCompatActivity() {
 
 ---
 
-## مرحله 6: تست و تأیید
+## Step 6: Test and verification
 
-### 6.1 تست اولیه
+### 6.1 Initial test
 
 ```bash
-# Build و نصب اپلیکیشن
+# Build and install
 ./gradlew installRelease
 
-# یا برای debug
+# Or debug variant
 ./gradlew installDebug
 ```
 
-### 6.2 تست عملکرد
+### 6.2 Behavior tests
 
-1. **تست موفقیت‌آمیز:**
-   - اپلیکیشن باید بدون مشکل اجرا شود
-   - لاگ‌ها باید "APK integrity verified successfully" را نشان دهند
+1. Success case:
+   - App launches normally
+   - Logs show "APK integrity verified successfully"
 
-2. **تست تغییر APK:**
-   - APK را تغییر دهید (مثلاً با apktool)
-   - اپلیکیشن باید خطای امنیتی نشان دهد
+2. Tamper case:
+   - Modify APK (e.g., apktool)
+   - App should block and show a security error
 
-### 6.3 تست با دکمه APK HMAC Protection
+### 6.3 Sample app button test
 
-در اپلیکیشن نمونه:
-1. دکمه "🛡️ APK HMAC Protection" را فشار دهید
-2. نتایج را در TestResultsActivity بررسی کنید
+In the sample app:
+1. Tap "🛡️ APK HMAC Protection"
+2. Review results in `TestResultsActivity`
 
-### 6.4 بررسی لاگ‌ها
+### 6.4 Logs
 
 ```bash
-# بررسی لاگ‌های اپلیکیشن
+# App logs
 adb logcat | grep "ApkHmacProtector"
 
-# یا
+# Or
 adb logcat | grep "APK"
 ```
 
 ---
 
-## مرحله 7: استقرار در تولید
+## Step 7: Production rollout
 
-### 7.1 Build نهایی
+### 7.1 Final build
 
 ```bash
-# Clean و build کامل
+# Clean and build
 ./gradlew clean
 ./gradlew assembleRelease
 
-# بررسی APK نهایی
+# Verify final APK
 ls -la app/build/outputs/apk/release/
 ```
 
-### 7.2 تأیید signature
+### 7.2 Verify signature
 
 ```bash
-# بررسی وجود signature
+# Ensure signature exists
 cat app/src/main/assets/apk_hmac_signature.txt
 
-# بررسی محتوای APK
+# Inspect APK contents
 unzip -l app/build/outputs/apk/release/app-release.apk | grep signature
 ```
 
-### 7.3 تست نهایی
+### 7.3 Final test
 
 ```bash
-# نصب و تست
+# Install and test
 adb install -r app/build/outputs/apk/release/app-release.apk
 
-# اجرای اپلیکیشن و بررسی عملکرد
+# Launch and verify behavior
 adb shell am start -n com.yourpackage/.MainActivity
 ```
 
-### 7.4 انتشار
+### 7.4 Publish
 
 ```bash
-# آپلود به Google Play Store یا سایر پلتفرم‌ها
-# APK با signature محافظت شده آماده است
+# Upload to Google Play or your store
+# APK with protected signature is ready
 ```
 
 ---
 
-## عیب‌یابی و مشکلات رایج
+## Troubleshooting
 
-### مشکل 1: اسکریپت اجرا نمی‌شود
+### Issue 1: Script does not run
 
 ```bash
-# بررسی دسترسی
+# Check permissions
 ls -la scripts/sign_apk_with_hmac.sh
 
-# تغییر دسترسی
+# Grant execute permission
 chmod +x scripts/sign_apk_with_hmac.sh
 
-# تست اجرا
+# Test run
 ./scripts/sign_apk_with_hmac.sh --help
 ```
 
-### مشکل 2: Python script خطا می‌دهد
+### Issue 2: Python script errors
 
 ```bash
-# بررسی نسخه Python
+# Check Python version
 python3 --version
 
-# نصب dependencies
+# Install dependencies
 pip3 install hashlib hmac
 
-# تست script
+# Help
 python3 scripts/generate_apk_hmac.py --help
 ```
 
-### مشکل 3: Signature تولید نمی‌شود
+### Issue 3: Signature not generated
 
 ```bash
-# بررسی مسیر APK
+# Check APK path
 ls -la app/build/outputs/apk/release/app-release.apk
 
-# بررسی دسترسی به فایل
+# File type
 file app/build/outputs/apk/release/app-release.apk
 
-# اجرای دستی
+# Manual run (verbose)
 ./scripts/sign_apk_with_hmac.sh app/build/outputs/apk/release/app-release.apk -v
 ```
 
-### مشکل 4: اپلیکیشن crash می‌کند
+### Issue 4: App crashes
 
 ```kotlin
-// اضافه کردن try-catch
+// Add try/catch
 try {
     val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
     // ...
 } catch (e: Exception) {
     Log.e("APK", "Integrity check failed", e)
-    // اقدام مناسب
+    // take appropriate action
 }
 ```
 
-### مشکل 5: Signature پیدا نمی‌شود
+### Issue 5: Signature not found
 
 ```kotlin
-// بررسی وجود فایل signature
+// Check signature file exists
 val signatureFile = File("${context.filesDir}/apk_hmac_signature.txt")
 if (!signatureFile.exists()) {
     Log.e("APK", "Signature file not found")
-    // تولید signature یا استفاده از fallback
+    // regenerate signature or use a fallback
 }
 ```
 
 ---
 
-## بهترین روش‌ها
+## Best practices
 
-### 1. امنیت
+### 1. Security
 
 ```kotlin
-// همیشه در background thread اجرا کنید
+// Always run on background thread
 lifecycleScope.launch(Dispatchers.IO) {
     val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
     // ...
 }
 
-// از hardware-backed keys استفاده کنید
+// Use hardware-backed keys
 val key = SecureHmacHelper.getBestAvailableHmacKey()
 ```
 
-### 2. عملکرد
+### 2. Performance
 
 ```kotlin
-// بررسی دوره‌ای را بهینه کنید
+// Tune periodic checks
 private val securityCheckInterval = 60000L // 1 دقیقه
 
-// از cache استفاده کنید
+// Use caches
 private var lastIntegrityCheck = 0L
 private val integrityCheckInterval = 300000L // 5 دقیقه
 ```
 
-### 3. مدیریت خطا
+### 3. Error handling
 
 ```kotlin
-// مدیریت graceful برای خطاها
+// Graceful error handling
 private fun handleSecurityError() {
     // لاگ کردن
     Log.e("APK", "Security check failed")
     
-    // اطلاع‌رسانی به کاربر
+    // notify the user
     showSecurityWarning()
     
-    // اقدام امنیتی
-    // finish() یا redirect به صفحه امنیتی
+    // security action
+    // finish() or redirect to a security screen
 }
 ```
 
-### 4. تست
+### 4. Testing
 
 ```kotlin
-// تست‌های واحد
+// Unit tests
 @Test
 fun testApkIntegrity() {
     val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
     assertTrue(integrityInfo.isIntegrityValid)
 }
 
-// تست‌های integration
+// Integration tests
 @Test
 fun testRepackagingDetection() {
     val isRepackaged = ApkHmacProtector.detectRepackaging(context)
@@ -523,7 +523,7 @@ fun testRepackagingDetection() {
 ### 5. CI/CD
 
 ```yaml
-# GitHub Actions
+# GitHub Actions example
 - name: Build APK
   run: ./gradlew assembleRelease
 
@@ -536,24 +536,24 @@ fun testRepackagingDetection() {
 
 ---
 
-## خلاصه مراحل
+## Summary
 
-1. ✅ **آماده‌سازی**: نصب dependencies و اسکریپت‌ها
-2. ✅ **پیکربندی**: تنظیم Gradle و مسیرها
-3. ✅ **تولید APK**: build کردن پروژه
-4. ✅ **تولید Signature**: اجرای اسکریپت HMAC
-5. ✅ **ادغام**: اضافه کردن کد تأیید
-6. ✅ **تست**: بررسی عملکرد
-7. ✅ **استقرار**: انتشار نهایی
+1. ✅ Preparation: dependencies and scripts
+2. ✅ Configuration: Gradle and paths
+3. ✅ Build: produce APK
+4. ✅ Signature: run HMAC script
+5. ✅ Integration: add verification code
+6. ✅ Testing: verify behavior
+7. ✅ Deployment: publish
 
 ---
 
-## پشتیبانی
+## Support
 
-در صورت بروز مشکل:
-1. لاگ‌ها را بررسی کنید
-2. مستندات را مطالعه کنید
-3. تست‌های نمونه را اجرا کنید
-4. با تیم توسعه تماس بگیرید
+If you encounter issues:
+1. Check logs
+2. Read docs
+3. Run sample tests
+4. Contact the team
 
-**🎉 حالا APK شما با HMAC محافظت شده و در برابر repackaging امن است!**
+**🎉 Your APK is now protected by HMAC and hardened against repackaging!**

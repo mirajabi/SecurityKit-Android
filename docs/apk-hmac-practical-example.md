@@ -1,14 +1,14 @@
-# مثال عملی APK HMAC Protection
+# APK HMAC Protection - Practical Example
 
-## 📱 سناریو: اپلیکیشن بانکداری
+## 📱 Scenario: Banking application
 
-فرض کنید یک اپلیکیشن بانکداری دارید که باید از repackaging محافظت شود.
+Assume you are building a banking app that must be protected against repackaging.
 
 ---
 
-## 🏗️ مرحله 1: آماده‌سازی پروژه
+## 🏗️ Step 1: Project setup
 
-### ساختار پروژه
+### Project structure
 ```
 BankingApp/
 ├── app/
@@ -43,7 +43,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
             
-            // اضافه کردن task برای تولید HMAC
+            // Add task to generate HMAC
             doLast {
                 exec {
                     commandLine 'bash', '../scripts/sign_apk_with_hmac.sh', 
@@ -65,7 +65,7 @@ dependencies {
 
 ---
 
-## 🔐 مرحله 2: پیاده‌سازی SecurityManager
+## 🔐 Step 2: Implement SecurityManager
 
 ### SecurityManager.kt
 ```kotlin
@@ -83,17 +83,17 @@ class SecurityManager(private val context: Context) {
     
     companion object {
         private const val TAG = "SecurityManager"
-        private const val SECURITY_CHECK_INTERVAL = 60000L // 1 دقیقه
+        private const val SECURITY_CHECK_INTERVAL = 60000L // 1 minute
     }
     
     /**
-     * تأیید امنیت APK در startup
+     * Verify APK security at startup
      */
     suspend fun verifyStartupSecurity(): Boolean {
         return try {
             Log.d(TAG, "Starting APK security verification...")
             
-            // تأیید APK integrity
+            // Verify APK integrity
             val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
             
             if (!integrityInfo.isIntegrityValid) {
@@ -101,7 +101,7 @@ class SecurityManager(private val context: Context) {
                 return false
             }
             
-            // بررسی repackaging
+            // Check repackaging
             val isRepackaged = ApkHmacProtector.detectRepackaging(context)
             
             if (isRepackaged) {
@@ -120,7 +120,7 @@ class SecurityManager(private val context: Context) {
     }
     
     /**
-     * شروع بررسی دوره‌ای امنیت
+     * Start periodic security checks
      */
     fun startPeriodicSecurityCheck() {
         scope.launch {
@@ -148,39 +148,38 @@ class SecurityManager(private val context: Context) {
     }
     
     /**
-     * مدیریت نقض امنیت
+     * Handle security breach
      */
     private fun handleSecurityBreach() {
         Log.e(TAG, "Security breach detected - terminating app")
         
-        // ذخیره رویداد امنیتی
+        // Persist security event
         saveSecurityEvent("APK_REPACKAGING_DETECTED")
         
-        // اطلاع‌رسانی به سرور
+        // Notify backend
         notifySecurityBreach()
         
-        // بستن اپلیکیشن
+        // Close app
         scope.launch(Dispatchers.Main) {
-            // می‌توانید به جای finish() به صفحه امنیتی بروید
             (context as? android.app.Activity)?.finish()
         }
     }
     
     /**
-     * مدیریت خطای امنیتی
+     * Handle security error
      */
     private fun handleSecurityError() {
         Log.e(TAG, "Security error occurred")
         
-        // ذخیره رویداد امنیتی
+        // Persist event
         saveSecurityEvent("APK_SECURITY_ERROR")
         
-        // اقدام مناسب (مثلاً محدود کردن دسترسی)
+        // Apply mitigation (limit functionality)
         limitAppFunctionality()
     }
     
     /**
-     * ذخیره رویداد امنیتی
+     * Save security event
      */
     private fun saveSecurityEvent(event: String) {
         try {
@@ -194,14 +193,13 @@ class SecurityManager(private val context: Context) {
     }
     
     /**
-     * اطلاع‌رسانی نقض امنیت به سرور
+     * Notify backend about breach
      */
     private fun notifySecurityBreach() {
         scope.launch {
             try {
-                // ارسال به سرور (پیاده‌سازی بر اساس نیاز)
                 Log.d(TAG, "Notifying server about security breach")
-                // TODO: پیاده‌سازی API call
+                // TODO: Implement API call
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to notify server", e)
             }
@@ -209,20 +207,19 @@ class SecurityManager(private val context: Context) {
     }
     
     /**
-     * محدود کردن عملکرد اپلیکیشن
+     * Limit app functionality
      */
     private fun limitAppFunctionality() {
-        // می‌توانید عملکردهای حساس را غیرفعال کنید
         Log.w(TAG, "Limiting app functionality due to security concerns")
     }
     
     /**
-     * بررسی وضعیت امنیت
+     * Current verification state
      */
     fun isSecurityVerified(): Boolean = isSecurityVerified
     
     /**
-     * پاکسازی منابع
+     * Cleanup resources
      */
     fun cleanup() {
         scope.cancel()
@@ -232,7 +229,7 @@ class SecurityManager(private val context: Context) {
 
 ---
 
-## 🏠 مرحله 3: پیاده‌سازی MainActivity
+## 🏠 Step 3: Implement MainActivity
 
 ### MainActivity.kt
 ```kotlin
@@ -253,28 +250,28 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
-        // ایجاد SecurityManager
+        // Create SecurityManager
         securityManager = SecurityManager(this)
         
-        // تأیید امنیت در startup
+        // Verify security at startup
         verifySecurityAndProceed()
     }
     
     private fun verifySecurityAndProceed() {
         lifecycleScope.launch {
-            // نمایش loading
+            // Show loading
             showLoadingDialog("Verifying app security...")
             
             try {
-                // تأیید امنیت APK
+                // Verify APK security
                 val isSecure = securityManager.verifyStartupSecurity()
                 
                 if (isSecure) {
-                    // امنیت تأیید شد
+                    // Security OK
                     hideLoadingDialog()
                     proceedToMainApp()
                 } else {
-                    // نقض امنیت
+                    // Breach detected
                     hideLoadingDialog()
                     handleSecurityBreach()
                 }
@@ -287,10 +284,10 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun proceedToMainApp() {
-        // شروع بررسی دوره‌ای
+        // Start periodic security checks
         securityManager.startPeriodicSecurityCheck()
         
-        // رفتن به صفحه اصلی
+        // Go to main screen
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
     }
@@ -298,25 +295,25 @@ class MainActivity : AppCompatActivity() {
     private fun handleSecurityBreach() {
         Toast.makeText(this, "Security breach detected. App will close.", Toast.LENGTH_LONG).show()
         
-        // بستن اپلیکیشن
+        // Close app
         finishAffinity()
     }
     
     private fun handleSecurityError(e: Exception) {
         Toast.makeText(this, "Security check failed. Please restart the app.", Toast.LENGTH_LONG).show()
         
-        // بستن اپلیکیشن
+        // Close app
         finishAffinity()
     }
     
     private fun showLoadingDialog(message: String) {
-        // پیاده‌سازی loading dialog
-        // TODO: نمایش dialog
+        // Implement loading dialog
+        // TODO: show dialog
     }
     
     private fun hideLoadingDialog() {
-        // مخفی کردن loading dialog
-        // TODO: مخفی کردن dialog
+        // Hide loading dialog
+        // TODO: hide dialog
     }
     
     override fun onDestroy() {
@@ -328,13 +325,12 @@ class MainActivity : AppCompatActivity() {
 
 ---
 
-## 🔑 مرحله 4: پیاده‌سازی LoginActivity
+## 🔑 Step 4: Implement LoginActivity
 
 ### LoginActivity.kt
 ```kotlin
 package com.bank.app
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -349,26 +345,26 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
         
-        // ایجاد SecurityManager
+        // Create SecurityManager
         securityManager = SecurityManager(this)
         
-        // تأیید امنیت قبل از login
+        // Verify security before login
         verifySecurityBeforeLogin()
     }
     
     private fun verifySecurityBeforeLogin() {
         lifecycleScope.launch {
             try {
-                // بررسی سریع امنیت
+                // Check current security state
                 val isSecure = securityManager.isSecurityVerified()
                 
                 if (!isSecure) {
-                    // امنیت تأیید نشده
+                    // Not verified yet
                     handleSecurityBreach()
                     return@launch
                 }
                 
-                // امنیت OK - ادامه login
+                // Security OK — enable login form
                 enableLoginForm()
                 
             } catch (e: Exception) {
@@ -378,8 +374,8 @@ class LoginActivity : AppCompatActivity() {
     }
     
     private fun enableLoginForm() {
-        // فعال کردن فرم login
-        // TODO: فعال کردن UI elements
+        // Enable login form
+        // TODO: enable UI elements
     }
     
     private fun handleSecurityBreach() {
@@ -401,7 +397,7 @@ class LoginActivity : AppCompatActivity() {
 
 ---
 
-## 🏗️ مرحله 5: Build و Deploy
+## 🏗️ Step 5: Build & Deploy
 
 ### Build Script
 ```bash
@@ -444,7 +440,7 @@ ls -la app/src/main/assets/apk_hmac_signature.txt
 echo "🎉 Banking App is ready for deployment!"
 ```
 
-### اجرای Build
+### Run the build
 ```bash
 chmod +x build_and_sign.sh
 ./build_and_sign.sh
@@ -452,61 +448,61 @@ chmod +x build_and_sign.sh
 
 ---
 
-## 🧪 مرحله 6: تست
+## 🧪 Step 6: Tests
 
-### تست 1: تست عادی
+### Test 1: Normal flow
 ```bash
-# نصب APK
+# Install APK
 adb install app/build/outputs/apk/release/app-release.apk
 
-# اجرای اپلیکیشن
+# Launch app
 adb shell am start -n com.bank.app/.MainActivity
 
-# بررسی لاگ‌ها
+# Logs
 adb logcat | grep "SecurityManager"
 ```
 
-### تست 2: تست Repackaging
+### Test 2: Repackaging
 ```bash
-# تغییر APK با apktool
+# Modify APK with apktool
 apktool d app/build/outputs/apk/release/app-release.apk
-# تغییر فایل‌ها
+# Change files
 apktool b app-release -o modified.apk
-# نصب APK تغییر یافته
+# Install modified APK
 adb install modified.apk
 
-# اجرا - باید خطای امنیتی نشان دهد
+# Expected: security error
 adb shell am start -n com.bank.app/.MainActivity
 ```
 
-### تست 3: تست Performance
+### Test 3: Performance
 ```bash
-# بررسی زمان startup
+# Measure startup
 adb shell am start -W com.bank.app/.MainActivity
 
-# بررسی مصرف حافظه
+# Memory usage
 adb shell dumpsys meminfo com.bank.app
 ```
 
 ---
 
-## 📊 نتایج مورد انتظار
+## 📊 Expected results
 
-### تست موفقیت‌آمیز
+### Success
 ```
 D/SecurityManager: Starting APK security verification...
 D/SecurityManager: APK security verification passed
 D/SecurityManager: Periodic security check passed
 ```
 
-### تست Repackaging
+### Repackaging
 ```
 E/SecurityManager: APK integrity check failed
 E/SecurityManager: Repackaging detected
 E/SecurityManager: Security breach detected - terminating app
 ```
 
-### تست Performance
+### Performance
 ```
 Startup time: +50-100ms
 Memory usage: +1-2MB
@@ -515,48 +511,47 @@ Battery impact: Minimal
 
 ---
 
-## 🔧 عیب‌یابی
+## 🔧 Troubleshooting
 
-### مشکل 1: اپلیکیشن crash می‌کند
+### Issue 1: App crashes
 ```kotlin
-// اضافه کردن try-catch
 try {
     val integrityInfo = ApkHmacProtector.verifyApkIntegrity(context)
 } catch (e: Exception) {
     Log.e("Security", "Error", e)
-    // اقدام مناسب
+    // take appropriate action
 }
 ```
 
-### مشکل 2: Signature پیدا نمی‌شود
+### Issue 2: Signature not found
 ```bash
-# بررسی وجود فایل
+# Check file exists
 ls -la app/src/main/assets/apk_hmac_signature.txt
 
-# بررسی محتوای APK
+# Inspect APK contents
 unzip -l app/build/outputs/apk/release/app-release.apk | grep signature
 ```
 
-### مشکل 3: Performance کند است
+### Issue 3: Performance
 ```kotlin
-// بهینه‌سازی بررسی دوره‌ای
-private const val SECURITY_CHECK_INTERVAL = 300000L // 5 دقیقه
+// Tune periodic interval
+private const val SECURITY_CHECK_INTERVAL = 300000L // 5 minutes
 
-// استفاده از cache
+// Use cache
 private var lastCheck = 0L
 ```
 
 ---
 
-## 🎯 خلاصه
+## 🎯 Summary
 
-این مثال عملی نشان می‌دهد که چگونه:
+This walkthrough demonstrates:
 
-1. ✅ **SecurityManager** برای مدیریت امنیت
-2. ✅ **تأیید امنیت** در startup
-3. ✅ **بررسی دوره‌ای** برای repackaging
-4. ✅ **مدیریت خطا** و نقض امنیت
-5. ✅ **Build خودکار** با HMAC signature
-6. ✅ **تست کامل** عملکرد و امنیت
+1. ✅ Using a SecurityManager to orchestrate checks
+2. ✅ Verifying security at startup
+3. ✅ Periodic monitoring for repackaging
+4. ✅ Robust error and breach handling
+5. ✅ Automated build-time HMAC signature
+6. ✅ Thorough testing of behavior and performance
 
-**🏦 اپلیکیشن بانکداری شما حالا کاملاً محافظت شده است!**
+**🏦 Your banking app is now well protected!**

@@ -1,20 +1,20 @@
 # HMAC Fallback Strategy
 
-## 🎯 استراتژی هوشمند Fallback
+## 🎯 Smart fallback strategy
 
-### **📋 اولویت‌بندی کلیدها:**
+### **📋 Key selection priority:**
 
 ```
-1. StrongBox (API 28+) - بالاترین امنیت
-2. TEE (API 23+) - امنیت سخت‌افزاری
-3. Software Keys - fallback نرم‌افزاری
+1. StrongBox (API 28+) — Highest security
+2. TEE (API 23+) — Hardware-backed security
+3. Software Keys — Software fallback
 ```
 
-## 🔄 نحوه کارکرد
+## 🔄 How it works
 
-### **1. StrongBox (اولویت اول):**
+### **1. StrongBox (top priority):**
 ```kotlin
-// اگر API 28+ و StrongBox موجود باشد
+// If API 28+ and StrongBox is available
 if (Build.VERSION.SDK_INT >= 28) {
     try {
         return getOrCreateStrongBoxHmacKey()
@@ -24,19 +24,19 @@ if (Build.VERSION.SDK_INT >= 28) {
 }
 ```
 
-**✅ مزایا:**
-- بالاترین سطح امنیت
-- کلیدها در hardware security module جداگانه
-- مقاوم در برابر physical attacks
+**✅ Pros:**
+- Highest security level
+- Keys in dedicated HSM
+- Resistant to physical attacks
 
-**❌ محدودیت‌ها:**
-- فقط در دستگاه‌های پرچم‌دار (15% دستگاه‌ها)
-- API 28+ مورد نیاز
-- ممکن است performance کندتر باشد
+**❌ Cons:**
+- Mostly on flagships (~15% of devices)
+- Requires API 28+
+- Potentially slower performance
 
-### **2. TEE (اولویت دوم):**
+### **2. TEE (second priority):**
 ```kotlin
-// Fallback به TEE (hardware-backed)
+// Fallback to TEE (hardware-backed)
 val keyGenerator = KeyGenerator.getInstance("AES", ANDROID_KEYSTORE)
 val spec = KeyGenParameterSpec.Builder(
     HMAC_KEY_ALIAS,
@@ -48,18 +48,18 @@ val spec = KeyGenParameterSpec.Builder(
     .build()
 ```
 
-**✅ مزایا:**
-- امنیت سخت‌افزاری
-- پشتیبانی در 85% دستگاه‌های جدید
-- Performance خوب
+**✅ Pros:**
+- Hardware-backed security
+- Supported by ~85% of modern devices
+- Good performance
 
-**❌ محدودیت‌ها:**
-- API 23+ مورد نیاز
-- ممکن است در برخی دستگاه‌ها محدود باشد
+**❌ Cons:**
+- Requires API 23+
+- May be limited on some devices
 
-### **3. Software Keys (اولویت سوم):**
+### **3. Software Keys (final fallback):**
 ```kotlin
-// Fallback نهایی به software keys
+// Final fallback to software keys
 private fun generateSoftwareHmacKey(): SecretKey {
     val keyGenerator = KeyGenerator.getInstance("AES")
     keyGenerator.init(256)
@@ -67,18 +67,18 @@ private fun generateSoftwareHmacKey(): SecretKey {
 }
 ```
 
-**✅ مزایا:**
-- همیشه کار می‌کند
-- سازگاری 100%
-- Performance سریع
+**✅ Pros:**
+- Always works
+- 100% compatibility
+- Fast
 
-**❌ محدودیت‌ها:**
-- امنیت کمتر
-- کلیدها در memory قابل دسترسی
+**❌ Cons:**
+- Lower security
+- Keys live in app memory
 
-## 📊 آمار سازگاری
+## 📊 Compatibility matrix
 
-| دستگاه | StrongBox | TEE | Software | استراتژی |
+| Device | StrongBox | TEE | Software | Strategy |
 |--------|-----------|-----|----------|----------|
 | **Samsung S24** | ✅ | ✅ | ✅ | StrongBox → TEE → Software |
 | **Samsung A14** | ❌ | ✅ | ✅ | TEE → Software |
@@ -87,9 +87,9 @@ private fun generateSoftwareHmacKey(): SecretKey {
 | **Xiaomi Redmi** | ❌ | ⚠️ | ✅ | Software |
 | **Android 5.1** | ❌ | ❌ | ✅ | Software |
 
-## 🔍 تشخیص نوع کلید
+## 🔍 Detecting key type
 
-### **در Runtime:**
+### **At runtime:**
 ```kotlin
 val (key, keyType) = SecureHmacHelper.getBestAvailableHmacKey()
 when (keyType) {
@@ -99,17 +99,17 @@ when (keyType) {
 }
 ```
 
-### **اطلاعات Fallback Strategy:**
+### **Fallback strategy info:**
 ```kotlin
-val fallbackInfo = SecureHmacHelper.getFallbackStrategyInfo()
-log("Recommended: ${fallbackInfo["recommended_strategy"]}")
-log("StrongBox available: ${fallbackInfo["strongbox_available"]}")
-log("TEE available: ${fallbackInfo["tee_available"]}")
+val info = SecureHmacHelper.getFallbackStrategyInfo()
+log("Recommended: ${info["recommended_strategy"]}")
+log("StrongBox available: ${info["strongbox_available"]}")
+log("TEE available: ${info["tee_available"]}")
 ```
 
-## 🎯 نتایج تست
+## 🎯 Test results
 
-### **دستگاه‌های پرچم‌دار:**
+### **Flagship devices:**
 ```
 🔄 Fallback Strategy:
    Recommended: StrongBox → TEE → Software
@@ -119,7 +119,7 @@ log("TEE available: ${fallbackInfo["tee_available"]}")
    ✅ Using StrongBox (highest security)
 ```
 
-### **دستگاه‌های متوسط:**
+### **Mid-range devices:**
 ```
 🔄 Fallback Strategy:
    Recommended: TEE → Software
@@ -129,7 +129,7 @@ log("TEE available: ${fallbackInfo["tee_available"]}")
    ✅ Using TEE (hardware-backed)
 ```
 
-### **دستگاه‌های قدیمی:**
+### **Legacy devices:**
 ```
 🔄 Fallback Strategy:
    Recommended: Software only
@@ -139,57 +139,42 @@ log("TEE available: ${fallbackInfo["tee_available"]}")
    ⚠️ Using Software keys (fallback)
 ```
 
-## 💡 توصیه‌های عملی
+## 💡 Practical tips
 
-### **برای Development:**
-1. ✅ همیشه fallback strategy را تست کنید
-2. ✅ روی دستگاه‌های مختلف test کنید
-3. ✅ Error handling جامع داشته باشید
+### **For development:**
+1. ✅ Always test the fallback path
+2. ✅ Test on multiple device classes
+3. ✅ Implement comprehensive error handling
 
-### **برای Production:**
-1. ✅ StrongBox را ترجیح دهید (اگر موجود باشد)
-2. ✅ TEE را به عنوان fallback استفاده کنید
-3. ✅ Software keys را به عنوان آخرین گزینه
+### **For production:**
+1. ✅ Prefer StrongBox when available
+2. ✅ Use TEE as fallback
+3. ✅ Use software keys as last resort
 
-### **برای Maximum Compatibility:**
-1. ✅ همیشه fallback mechanisms داشته باشید
-2. ✅ Graceful degradation پیاده‌سازی کنید
-3. ✅ User feedback مناسب ارائه دهید
+### **For maximum compatibility:**
+1. ✅ Always keep fallback mechanisms
+2. ✅ Implement graceful degradation
+3. ✅ Provide user-friendly feedback
 
-## 🔧 کد نمونه Production:
-
+## 🔧 Production sample code
 ```kotlin
 class SecureHmacManager {
-    
     fun getSecureHmacKey(): SecretKey {
         return try {
-            // Try StrongBox first
             if (Build.VERSION.SDK_INT >= 28) {
-                try {
-                    return SecureHmacHelper.getOrCreateStrongBoxHmacKey()
-                } catch (e: Exception) {
-                    log("StrongBox failed: ${e.message}")
-                }
+                try { return SecureHmacHelper.getOrCreateStrongBoxHmacKey() }
+                catch (e: Exception) { log("StrongBox failed: ${e.message}") }
             }
-            
-            // Fallback to TEE
             if (Build.VERSION.SDK_INT >= 23) {
-                try {
-                    return SecureHmacHelper.getOrCreateSecureHmacKey()
-                } catch (e: Exception) {
-                    log("TEE failed: ${e.message}")
-                }
+                try { return SecureHmacHelper.getOrCreateSecureHmacKey() }
+                catch (e: Exception) { log("TEE failed: ${e.message}") }
             }
-            
-            // Final fallback to software
             SecureHmacHelper.generateSoftwareHmacKey()
-            
         } catch (e: Exception) {
             log("All methods failed: ${e.message}")
             throw SecurityException("Unable to generate secure HMAC key")
         }
     }
-    
     fun getKeyTypeInfo(): String {
         val (_, keyType) = SecureHmacHelper.getBestAvailableHmacKey()
         return when (keyType) {
@@ -202,17 +187,17 @@ class SecureHmacManager {
 }
 ```
 
-## 📈 خلاصه:
+## 📈 Summary
 
-**🎯 استراتژی هوشمند:**
-- **StrongBox** برای بالاترین امنیت (15% دستگاه‌ها)
-- **TEE** برای امنیت سخت‌افزاری (85% دستگاه‌ها)
-- **Software** برای سازگاری 100%
+**🎯 Smart strategy:**
+- **StrongBox** for highest security (~15% of devices)
+- **TEE** for hardware-backed security (~85% of devices)
+- **Software** for 100% compatibility
 
-**✅ مزایا:**
-- امنیت بهینه برای هر دستگاه
-- سازگاری کامل
-- Performance مناسب
+**✅ Benefits:**
+- Optimal security per device
+- Full compatibility
+- Good performance
 - Graceful degradation
 
-**🚀 نتیجه:** هر دستگاه بهترین سطح امنیت ممکن را دریافت می‌کند!
+**🚀 Result:** Each device gets the best possible security level!
