@@ -2,6 +2,7 @@ package com.miaadrajabi.securitymodule.config
 
 import android.content.Context
 import com.miaadrajabi.securitymodule.crypto.CryptoUtils
+import com.miaadrajabi.securitymodule.crypto.SecureHmacHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -11,6 +12,7 @@ import okhttp3.Request
 import java.security.PublicKey
 import java.security.spec.X509EncodedKeySpec
 import java.util.concurrent.TimeUnit
+import javax.crypto.SecretKey
 
 /**
  * Configuration integrity verification utilities.
@@ -33,8 +35,32 @@ object ConfigIntegrity {
     )
 
     /**
-     * Verify HMAC signature of a configuration.
+     * Verify HMAC signature of a configuration using secure Android Keystore key.
      */
+    @JvmStatic
+    suspend fun verifyHmacSignature(
+        config: SecurityConfig,
+        signature: String,
+        context: Context? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val configJson = Json.encodeToString(config)
+            val hmacKey = if (context != null) {
+                SecureHmacHelper.getOrCreateDeviceBoundHmacKey(context)
+            } else {
+                SecureHmacHelper.getOrCreateSecureHmacKey()
+            }
+            SecureHmacHelper.verifyHmacSignature(configJson.toByteArray(), signature, hmacKey)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Verify HMAC signature of a configuration using legacy string key (for backward compatibility).
+     * @deprecated Use verifyHmacSignature with Context parameter instead
+     */
+    @Deprecated("Use verifyHmacSignature with Context parameter for better security")
     @JvmStatic
     suspend fun verifyHmacSignature(
         config: SecurityConfig,
@@ -51,9 +77,31 @@ object ConfigIntegrity {
     }
 
     /**
-     * Verify HMAC signature over RAW JSON bytes (no canonicalization).
-     * This makes it easy to sign with simple CLI tools (openssl, PowerShell, Python).
+     * Verify HMAC signature over RAW JSON bytes using secure Android Keystore key.
      */
+    @JvmStatic
+    suspend fun verifyHmacSignatureRaw(
+        rawJson: String,
+        signature: String,
+        context: Context? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val hmacKey = if (context != null) {
+                SecureHmacHelper.getOrCreateDeviceBoundHmacKey(context)
+            } else {
+                SecureHmacHelper.getOrCreateSecureHmacKey()
+            }
+            SecureHmacHelper.verifyHmacSignature(rawJson.toByteArray(), signature, hmacKey)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Verify HMAC signature over RAW JSON bytes using legacy string key (for backward compatibility).
+     * @deprecated Use verifyHmacSignatureRaw with Context parameter instead
+     */
+    @Deprecated("Use verifyHmacSignatureRaw with Context parameter for better security")
     @JvmStatic
     suspend fun verifyHmacSignatureRaw(
         rawJson: String,
@@ -92,8 +140,37 @@ object ConfigIntegrity {
     }
 
     /**
-     * Load and verify configuration from signed asset.
+     * Load and verify configuration from signed asset using secure Android Keystore HMAC.
      */
+    @JvmStatic
+    suspend fun loadSignedConfigFromAsset(
+        context: Context,
+        configAssetPath: String,
+        signatureAssetPath: String,
+        useSecureHmac: Boolean = true,
+        publicKeyPem: String? = null
+    ): SecurityConfig? = withContext(Dispatchers.IO) {
+        try {
+            val configJson = context.assets.open(configAssetPath).bufferedReader().use { it.readText() }
+            val signature = context.assets.open(signatureAssetPath).bufferedReader().use { it.readText() }
+            
+            val config = Json.decodeFromString<SecurityConfig>(configJson)
+            val isValid = when {
+                useSecureHmac -> verifyHmacSignature(config, signature, context)
+                publicKeyPem != null -> verifyRsaSignature(config, signature, publicKeyPem)
+                else -> false
+            }
+            if (isValid) config else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Load and verify configuration from signed asset using legacy HMAC key (for backward compatibility).
+     * @deprecated Use loadSignedConfigFromAsset with useSecureHmac parameter instead
+     */
+    @Deprecated("Use loadSignedConfigFromAsset with useSecureHmac parameter for better security")
     @JvmStatic
     suspend fun loadSignedConfigFromAsset(
         context: Context,
@@ -119,8 +196,30 @@ object ConfigIntegrity {
     }
 
     /**
-     * Load and verify configuration from signed asset using RAW JSON HMAC.
+     * Load and verify configuration from signed asset using RAW JSON HMAC with secure Android Keystore.
      */
+    @JvmStatic
+    suspend fun loadSignedConfigFromAssetRaw(
+        context: Context,
+        configAssetPath: String,
+        signatureAssetPath: String,
+        useSecureHmac: Boolean = true
+    ): SecurityConfig? = withContext(Dispatchers.IO) {
+        try {
+            val configJson = context.assets.open(configAssetPath).bufferedReader().use { it.readText() }
+            val signature = context.assets.open(signatureAssetPath).bufferedReader().use { it.readText() }
+            if (!verifyHmacSignatureRaw(configJson, signature, if (useSecureHmac) context else null)) return@withContext null
+            Json.decodeFromString<SecurityConfig>(configJson)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Load and verify configuration from signed asset using RAW JSON HMAC with legacy key (for backward compatibility).
+     * @deprecated Use loadSignedConfigFromAssetRaw with useSecureHmac parameter instead
+     */
+    @Deprecated("Use loadSignedConfigFromAssetRaw with useSecureHmac parameter for better security")
     @JvmStatic
     suspend fun loadSignedConfigFromAssetRaw(
         context: Context,

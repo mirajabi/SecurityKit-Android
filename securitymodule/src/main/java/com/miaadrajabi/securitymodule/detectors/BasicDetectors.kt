@@ -204,6 +204,57 @@ object VpnDetector {
             false
         }
     }
+    
+    /**
+     * Comprehensive VPN detection with detailed information.
+     */
+    fun collectVpnSignals(): VpnSignals {
+        val reasons = mutableListOf<String>()
+        var count = 0
+        
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            if (interfaces != null) {
+                for (ni in interfaces) {
+                    if (ni.isUp) {
+                        val name = ni.name
+                        when {
+                            name == "tun0" -> {
+                                reasons.add("interface.tun0")
+                                count++
+                            }
+                            name == "ppp0" -> {
+                                reasons.add("interface.ppp0")
+                                count++
+                            }
+                            name.startsWith("tun") -> {
+                                reasons.add("interface.tun_$name")
+                                count++
+                            }
+                            name.startsWith("ppp") -> {
+                                reasons.add("interface.ppp_$name")
+                                count++
+                            }
+                            name.contains("vpn", ignoreCase = true) -> {
+                                reasons.add("interface.vpn_$name")
+                                count++
+                            }
+                            name.contains("tap", ignoreCase = true) -> {
+                                reasons.add("interface.tap_$name")
+                                count++
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            reasons.add("error: ${t.message}")
+        }
+        
+        return VpnSignals(count, reasons)
+    }
+    
+    data class VpnSignals(val count: Int, val reasons: List<String>)
 }
 
 

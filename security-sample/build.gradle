@@ -6,7 +6,7 @@ plugins {
 android {
     buildFeatures {
         buildConfig true
-    }
+  }
     namespace 'com.miaadrajabi.securitysample'
     compileSdk 34
 
@@ -40,6 +40,7 @@ android {
 dependencies {
     implementation project(':securitymodule')
     implementation libs.androidx.core.ktx
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1"
 }
 
 

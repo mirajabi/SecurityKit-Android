@@ -156,6 +156,14 @@ fun Activity.renderDetailedReport(report: SecurityReport, config: SecurityConfig
     secureBtn.setPadding(32, 16, 32, 16)
     root.addView(secureBtn)
 
+    val hmacDemoBtn = Button(this)
+    hmacDemoBtn.text = "🔐 Secure HMAC Demo"
+    hmacDemoBtn.setOnClickListener {
+        startActivity(android.content.Intent(this, SecureHmacDemoActivity::class.java))
+    }
+    hmacDemoBtn.setPadding(32, 16, 32, 16)
+    root.addView(hmacDemoBtn)
+
     val lp = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     root.layoutParams = lp
     root.gravity = Gravity.TOP

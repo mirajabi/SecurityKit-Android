@@ -18,9 +18,36 @@ object SecurityConfigLoader {
     }
 
     /**
+     * Try to load a signed config first using secure Android Keystore HMAC, then fall back to plain asset.
+     * This is the recommended method for production use.
+     */
+    @JvmStatic fun fromAssetPreferSigned(
+        context: Context,
+        assetName: String = "security_config.json",
+        signatureAssetName: String = "security_config.sig",
+        useSecureHmac: Boolean = true
+    ): SecurityConfig {
+        return try {
+            if (useSecureHmac) {
+                val signed = runBlocking {
+                    ConfigIntegrity.loadSignedConfigFromAssetRaw(
+                        context, assetName, signatureAssetName, useSecureHmac = true
+                    )
+                }
+                if (signed != null) return signed
+            }
+            fromAsset(context, assetName)
+        } catch (t: Throwable) {
+            fromAsset(context, assetName)
+        }
+    }
+
+    /**
      * Try to load a signed config first (HMAC raw), then fall back to plain asset.
      * HMAC key is supplied by caller (env var, remote, or BuildConfig).
+     * @deprecated Use fromAssetPreferSigned with useSecureHmac parameter instead
      */
+    @Deprecated("Use fromAssetPreferSigned with useSecureHmac parameter for better security")
     @JvmStatic fun fromAssetPreferSigned(
         context: Context,
         assetName: String = "security_config.json",
@@ -30,8 +57,9 @@ object SecurityConfigLoader {
         return try {
             if (!hmacKey.isNullOrEmpty()) {
                 val signed = runBlocking {
-                    ConfigIntegrity.SecureLoader
-                        .fromAssetWithHmacRaw(context, assetName, signatureAssetName, hmacKey)
+                    ConfigIntegrity.loadSignedConfigFromAssetRaw(
+                        context, assetName, signatureAssetName, hmacKey
+                    )
                 }
                 if (signed != null) return signed
             }

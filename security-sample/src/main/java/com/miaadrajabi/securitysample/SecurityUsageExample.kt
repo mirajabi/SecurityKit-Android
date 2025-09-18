@@ -6,6 +6,8 @@ import com.miaadrajabi.securitymodule.SecurityReport
 import com.miaadrajabi.securitymodule.Severity
 import com.miaadrajabi.securitymodule.config.SecurityConfig
 import com.miaadrajabi.securitymodule.config.SecurityConfigLoader
+import com.miaadrajabi.securitymodule.crypto.SecureHmacHelper
+import com.miaadrajabi.securitymodule.examples.SecureHmacExample
 
 /**
  * Comprehensive example showing how to use SecurityModule
@@ -18,8 +20,13 @@ object SecurityUsageExample {
      * If any security condition fails, user will be redirected to warning page
      */
     fun basicUsage(context: Context) {
-        // Load configuration from assets
-        val config = SecurityConfigLoader.fromAsset(context, "security_config.json")
+        // Load configuration from assets with secure HMAC (recommended for production)
+        val config = SecurityConfigLoader.fromAssetPreferSigned(
+            context = context,
+            assetName = "security_config.json",
+            signatureAssetName = "security_config.sig",
+            useSecureHmac = true // Use Android Keystore for HMAC verification
+        )
         
         // Build SecurityModule
         val securityModule = SecurityModule.Builder(context)
@@ -295,6 +302,67 @@ object SecurityUsageExample {
             println("❌ Security check failed: ${e.message}")
             // Handle error - you might want to show an error dialog
             // or fallback to a basic security check
+        }
+    }
+
+    /**
+     * Example: Secure HMAC usage with Android Keystore
+     * This demonstrates the new secure HMAC implementation
+     */
+    fun secureHmacUsage(context: Context) {
+        // Check StrongBox availability
+        val strongBoxAvailable = SecureHmacHelper.isStrongBoxAvailableForHmac()
+        println("StrongBox available for HMAC: $strongBoxAvailable")
+
+        // Load configuration with secure HMAC
+        val config = SecureHmacExample.loadProductionConfig(context)
+        
+        // Build SecurityModule with secure configuration
+        val securityModule = SecurityModule.Builder(context)
+            .setConfig(config!!)
+            .build()
+        
+        // Run security checks
+        val report = securityModule.runAllChecksBlocking()
+        
+        // Check for configuration tampering
+        val configTampering = report.findings.any { it.id == "config_tampering" }
+        if (configTampering) {
+            println("Configuration tampering detected!")
+        }
+        
+        // Test HMAC generation and verification
+        val testData = "test configuration data"
+        val signature = SecureHmacExample.generateHmacForTesting(context, testData)
+        if (signature != null) {
+            val isValid = SecureHmacExample.verifyConfigManually(context, testData, signature)
+            println("HMAC verification result: $isValid")
+        }
+    }
+
+    /**
+     * Example: Migration from legacy HMAC to secure HMAC
+     */
+    fun migrateToSecureHmac(context: Context) {
+        // Test migration
+        val migrationSuccess = SecureHmacExample.migrateToSecureHmac(context)
+        if (migrationSuccess) {
+            println("Successfully migrated to secure HMAC")
+            
+            // Now use secure HMAC for configuration loading
+            val config = SecurityConfigLoader.fromAssetPreferSigned(
+                context = context,
+                useSecureHmac = true
+            )
+            
+            val securityModule = SecurityModule.Builder(context)
+                .setConfig(config)
+                .build()
+            
+            val report = securityModule.runAllChecksBlocking()
+            println("Security report with secure HMAC: ${report.overallSeverity}")
+        } else {
+            println("Migration to secure HMAC failed, using fallback")
         }
     }
 }
